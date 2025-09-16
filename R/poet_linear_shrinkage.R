@@ -63,9 +63,9 @@ pck <- min(max(pck, 1L), p - 1L)
 
 Uk=U[,1:pck];dk=d[1:pck]
 hatc=(sum(diag(S))-sum(dk))/(p-pck-pck*p/n)
-dk <- pmax(dk - hatc*p/n, 0)
+dk <- mcp(dk,hatc*p/n,a=3)
 P=matrixMultiply(Uk,t(Uk)*dk)
-E=S-P;e=diag(E);e[e<0]=max(hatc,0.01);diag(E)=e
+E=S-P;e=diag(E);e[e<0]=min(e[e>0]);diag(E)=e
 eigenvec=shrinkage_vec
 for(i in 1:length(shrinkage_vec)){
 E1=E*(1-shrinkage_vec[i])+diag(diag(E))*shrinkage_vec[i]

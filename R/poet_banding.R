@@ -70,9 +70,9 @@ poet_banding=function(S,n,cutoff_method="D.ratio",k_min=5,k_max=min(15,round(nro
 
   Uk=U[,1:pck];dk=d[1:pck]
   hatc=(sum(diag(S))-sum(dk))/(p-pck-pck*p/n)
-  dk <- pmax(dk - hatc*p/n, 0)
+  dk <- mcp(dk,hatc*p/n,a=3)
   P=matrixMultiply(Uk,t(Uk)*dk)
-  E=S-P;e=diag(E);e[e<0]=max(hatc,0.01);diag(E)=e
+  E=S-P;e=diag(E);e[e<0]=min(e[e>0]);diag(E)=e
   E1=banding(E,k_vec=banding_vec,eigenmin=eigenmin)
   hatS=P+E1
   return(cov2cor(hatS))
