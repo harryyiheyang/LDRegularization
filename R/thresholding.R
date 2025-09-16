@@ -7,6 +7,7 @@
 #' @param mcp_a    MCP 'a' parameter (default 3)
 #' @importFrom CppMatrix matrixEigen
 #' @return         Regularized covariance matrix (PSD up to eigenmin)
+#' @export
 thresholding <- function(
 S,
 lam_vec  = seq(0.01, 0.10, by = 0.01),
