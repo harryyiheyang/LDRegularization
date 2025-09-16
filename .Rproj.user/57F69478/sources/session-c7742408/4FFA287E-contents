@@ -1,0 +1,208 @@
+---
+title: "Fine-mapping gene-gene and gene-environment interactions at phenotype-associated loci"
+author: "Yihe Yang and Xiaofeng Zhu"
+date: ""
+bibliography: ["susie4x.bib"]
+csl: ["chicago.csl"]
+link-citations: true
+header-includes:
+   - \usepackage{amsthm,amsmath,amsfonts,amssymb,bm,algorithm,algpseudocode,xcolor}
+output: 
+  word_document:
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Abstract
+
+We propose SuSiE4X, one of the first methods for fine-mapping statistical gene–gene (G×G) and gene–environment (G×E) interactions at a phenotype-associated locus. SuSiE4X builds upon the “sum of single effects” (SuSiE) prior, enabling the identification of credible sets of interaction signals while effectively accounting for the high linkage disequilibrium (LD) among variants within a locus. Notably, it is highly computationally efficient and scalable to large biobank datasets, which can complete a fine-mapping job for approximately 350,000 individuals and 3,000 variants within a minute. In simulations, SuSiE4X achieves substantial improvements in both true positive and true negative rates compared to existing methods, without sacrificing computational speed. We applied SuSiE4X to 2,768 genome-wide significant loci across lipid, blood pressure, and lung traits in the UK Biobank, identifying both known main effects and novel gene–gene and gene–environment interactions, demonstrating its practical ability to fine-map interactions.
+
+Keywords: Fine-mapping; gene-gene interaction; gene-environment interaction; sum of single effects.
+
+# Introduction
+
+Epistasis, also referred to as gene–gene (G×G) interaction, plays a crucial role in understanding evolutionary processes, guiding breeding strategies, and elucidating the complex mechanisms underlying human diseases [@cordell2002epistasis]. G×G interaction has been defined in various ways, including molecular interactions between gene products, functional dependencies across loci, and statistical deviations from additive genetic effects [@wang2011meaning]. In this paper, we focus on the linear G×G interactions of two genetic variants, referring specifically to effects captured by including a cross-product term between two genotype variables in a regression model. This is because the linear interactions are readily analyzed using linear or logistic regression and have become among the most extensively studied forms of interaction in genetic research [@cordell2009detecting]. In parallel, gene–environment (G×E) interactions describe how the effect of a genetic variant varies depending on environmental exposures [@hunter2005gene]. We similarly focus on the linear G×E interactions, where the joint contribution of a genetic and an environmental variable is represented by their cross-product term [@aschard2016perspective]. 
+
+Exhaustive search strategies have been developed and widely applied to identify candidate G×G interactions, in a manner analogous to genome-wide association studies (GWAS) [@abdellaoui202315]. One of the simplest strategies in this framework is the “test of association allowing for interaction”, which jointly evaluates the main effects of two genetic variants along with their interaction term, testing them against the global null hypothesis of no effect [@marchini2005genome]. An alternative and more commonly adopted approach is the “test of interaction”, which compares a full model including both main effects and their interaction against a reduced model with only main effects. Commonly used implementations of both strategies include methods such as BOOST [@wan2010boost] and PLINK [@purcell2007plink]. To improve computational efficiency, some methods restrict the search space using a screening-based strategy. A widely used approach is the two-stage procedure, where variants showing marginal associations are first selected, and interactions are then tested only among this subset, reducing the number of tests while enriching for potentially interacting loci [@lin2006evaluating;@evans2006two].
+
+Genome-wide environmental interaction (GWEI) studies are widely used to identify linear G×E interactions that influence disease risk or trait variation. In a GWEI, each genetic variant is modeled as an additive form of its main effect, the effect of a fixed environmental exposure, and their linear interaction term. This model is then applied in a genome-wide scan to identify G×E interactions, with both the “test of association allowing for interaction” and the “test of interaction” typically reported. The Gene–Lifestyle Interactions Working Group within the Cohorts for Heart and Aging Research in Genetic Epidemiology (CHARGE) Consortium has led several large-scale GWEIs focusing on environmental factors such as alcohol consumption [@de2019multiancestry], smoking [@sung2018large;@bentley2019multi], physical activity [@kilpelainen2019multi], and sleep [@noordam2024large], among many others. In addition to interaction testing frameworks, variance quantitative trait locus (vQTL) studies have been used to prioritize loci that may harbor G×E effects [@yang2012fto;@wang2019genotype]. These methods scan the genome for variants associated with variability in the phenotype, rather than its mean, and are motivated by the idea that unmodeled G×E interactions can manifest as increased phenotypic variance. Nevertheless, vQTL signals may arise from G×E interactions, epistasis, or haplotype effects, and therefore do not directly identify the environmental variables involved [@brown2014genetic].
+
+While the aforementioned methods and studies have successfully identified multiple loci with evidence of G×G and G×E interactions, it remains challenging to identify which specific variant pairs are truly causal. This uncertainty complicates the downstream validation and replication of loci with interaction signals. A notable cautionary example is raised by [@hemani2014retracted], who initially reported hundreds of significant pairwise interactions between common variants affecting the expression of substantial genes, and also observed strong concordance in the direction of epistatic effects and enrichment in interaction p-values in independent replications. However, @wood2014another later demonstrated that these signals were likely to be fully explained by a single, ungenotyped variant in linkage disequilibrium (LD) with the tested variants, rather than true epistasis. This case underscores a fundamental challenge in interaction analysis: due to LD structure, an apparent interaction between two variants may simply reflect the marginal or interactive effect of a third, unmeasured variant. Therefore, it is necessary to move beyond pairwise testing and jointly consider all variants within a locus and their potential interactions. 
+
+In the literature, several methods have been proposed to fine-map interactions among high-dimensional variables, including hierarchical interaction-Net (hierNet) [@bien2013lasso], Group-Lasso INTERaction-NET (glinternet) [@lim2015learning], and regularization algorithms under the marginality principle (RAMP) [@hao2018model]. However, these methods face fundamental barriers when applied to genomic interaction fine-mapping. Computationally, they scale poorly to biobank datasets, which could become prohibitive even with hundreds of variants, while typical GWAS loci contain thousands of variants and hundreds of thousands of individuals. Statistically, they lack robustness against high correlated and nearly duplicate variants common in high-LD regions, leading to numerical instability and violating the irrepresentable condition required for consistent variable selection [@zhao2006model]. On the other hand, some methods have been developed specifically to fine-map G×E pairs; see, e.g., @zhang2020identification, @ren2023robust, @wu2024high. However, these approaches typically do not incorporate G×G interactions and may not scale well to biobank data. To our knowledge, no existing method simultaneously accounts for the complex LD structure and is scalable for biobank data when fine-mapping both G×G and G×E interactions. 
+
+We propose a new Bayesian method, the sum of single effects for interactions (SuSiE4X), which extends the state-of-the-art fine-mapping approach SuSiE [@wang2020simple;@zou2022fine] to identify G×G and G×E interactions. SuSiE4X generalizes the concept of credible sets from SuSiE by recognizing that interaction effects should not be defined between individual variants, but rather between credible sets of variants (for G×G), or between a credible set of variants and an environmental variable (for G×E).  SuSiE4X leverages SuSiE to automatically identify both main-effect and interaction-effect credible sets, thereby mitigating the challenges posed by redundant or highly correlated variants. In addition, SuSiE4X is optimized for computational efficiency and can complete genome-wide interaction fine-mapping on datasets with approximately 350,000 individuals and 7,000 variants within a minute. In real data analyses of 2,768 genome-wide significant loci across lipid, blood pressure, and lung traits from the UK Biobank, SuSiE4X uncovered both established main effects and novel G×G and G×E signals. These included prominent sex-dependent interactions for lung function and pollution-related modifiers of blood pressure, illustrating the method’s ability to fine-map complex interaction architectures at phenotype-associated loci.
+
+\newpage
+
+# Results
+
+## Overview of SuSiE4X
+
+SuSiE4X is a joint main-and-interaction effects fine-mapping method that are based on the following model:
+$$
+y_i = \beta_0 + \sum_{j=1}^p \beta_j x_{ij} + \sum_{s=1}^q \alpha_s z_{is} + \sum_{j=1}^p \sum_{j'=1}^p \theta_{jj'} x_{ij} x_{ij'} + \sum_{j=1}^p \sum_{s=1}^q \gamma_{js} x_{ij} z_{is} + \epsilon_i,
+$$
+where $y_i$ is the outcome, $x_{i1}, \dots, x_{ip}$ are $p$ genetic variants at a locus, $z_{i1}, \dots, z_{iq}$ are $q$ environmental variables, and $\epsilon_i\sim\mathcal{N}(0,\sigma^2)$ with $\sigma^2>0$. The model parameters include the intercept $\beta_0$, main genetic effects $\beta_1, \dots, \beta_p$, environmental effects $\alpha_1, \dots, \alpha_q$, G×G interaction effects $\theta_{11}, \dots, \theta_{pp}$ (including quadratic terms like $x_{ij}^2$), and G×E interaction effects $\gamma_{11}, \dots, \gamma_{pq}$. Additional, to impose biologically meaningful structure and ensure model interpretability, we adopt the \emph{strong heredity} constraint in modeling interaction effects:
+$$
+\theta_{jj'} \neq 0 \ \Rightarrow\ \beta_j \neq 0 \ \mathrm{and} \ \beta_{j'} \neq 0,\quad
+\gamma_{js} \neq 0 \ \Rightarrow\ \beta_j \neq 0 \ \mathrm{and} \ \alpha_s \neq 0,
+$$
+meaning that any G×G or G×E interaction term can be nonzero only if both corresponding main effects are included in the model. This structure ensures that interaction effects are interpreted in the context of their associated marginal effects, which aligns with prior biological knowledge and improves model stability [@choi2010variable;@bien2013lasso;@lim2015learning]. 
+
+Within a genomic locus, genetic variants are often highly correlated due to LD. In extreme cases, two variants can be nearly duplicates, making it statistically impossible to determine which one is causal. Figure 1A illustrates this challenge with an LD matrix from a representative locus, where clusters of variants move almost perfectly together. Traditional interaction models, as shown in Figure 1B, treat each pair of variants as an independent candidate for interaction. Under high LD, this design makes it impossible to know which interaction term is truly driving the signal. For instance, if variant 1 and variant 2 are nearly identical, and both show evidence of interacting with variant 3, a variant-wise model cannot distinguish whether the signal comes from variant 1 × variant 3, variant 2× variant 3, or both. This ambiguity leads to unstable results and complicates biological interpretation.
+
+To address this issue, @wang2020simple proposed the concept of credible sets and developed SuSiE for fine-mapping causal variants. The idea is to acknowledge that correlated variants may be statistically indistinguishable and to group them into a set that collectively represents the signal. For example, suppose variant 1 and variant 2 are in perfect LD and both causal to the outcome. Rather than choosing one over the other, SuSiE assigns each a 50% probability of being causal and places them into the same credible set. This correctly reflects the uncertainty: at least one of them must be causal, but the data cannot tell which. By reporting credible sets instead of individual variants, SuSiE provides a principled solution for fine-mapping varinat with main causual effects in regions of high LD.
+
+SuSiE4X extends this concept from main effects to interaction effects. In SuSiE4X, the unit of inference is no longer individual variants but groups of variants within credible sets. Returning to the earlier example, suppose variants 1 and 2 are in perfect LD and both belong to credible set A, while variant 3 belongs to credible set B. Statistically, we cannot determine whether the true interaction is between variant 1 and variant 3 or between variant 2 and variant 3. As illustrated in Figure 1C, SuSiE4X infers that there is an interaction between credible set A and credible set B, which encodes the uncertainty that at least one variant pair, one from each set, is driving the interaction. We call this an interaction credible set. By elevating the unit of inference from variants to credible sets, SuSiE4X provides stable and interpretable results in the presence of LD. Furthermore, SuSiE4X incorporates the strong heredity principle through a computationally efficient algorithm that scales to biobank datasets with hundreds of thousands of individuals and thousands of variants, a computational regime where existing methods fail due to prohibitive memory and runtime requirements.
+
+## Simulation 
+We designed two simulation scenarios to evaluate the performance of SuSiE4X. First, we used real UK Biobank genotypes centered at locus 1:55521109, covering a 1 Mb window with 7,426 variants. After quality control, 351,619 individuals and 16 standardized environmental variables (including age, sex, and others) were retained. In each replicate, we randomly selected three causal variants with effect sizes between 0.01 and 0.03. The first two causal variants were assigned a G×G interaction, and the first causal variant also had G×E interactions with the first two environmental variables, with interaction effect sizes also ranging from 0.01 to 0.03. Our aim was to demonstrate that SuSiE4X could work ideally under realistic large-scale genetic architectures. Second, we compared SuSiE4X with RAMP and glinternet in a small-scale setting. Here, the sample size was set to 500 or 1000 individuals, and the number of variants was limited to 10. For larger numbers of variants, especially under glinternet, computation became prohibitively slow. This script was designed to highlight the relative advantages of SuSiE4X over existing interaction fine-mapping methods in controlled conditions. To our knowledge, no existing method can process biobank-scale data within reasonable time and memory limits, which is why we did not include RAMP or glinternet in the first scenario.
+
+We evaluated SuSiE4X using true positives (TP) and true negatives (TN) for both main and interaction effects, following the principles of credible set fine-mapping. For main effects, a TP was counted when the reported credible sets contained all true causal variants, even if additional correlated variants were also included, and a TN when no spurious credible sets composed solely of non-causal variants were reported. For interactions, we expanded each interaction credible set to the variant level and checked whether all true interacting pairs were captured (TP) and whether no spurious interaction sets were produced (TN). This criterion acknowledges that high LD often makes it impossible to distinguish the exact causal variants, consistent with existing approaches such as SuSiE. Our TP definition parallels empirical coverage (the probability that credible sets include the true signals), whereas our TN definition parallels false discovery rate control (ensuring that sets without causal variants are avoided) [@wang2020simple]. We applied strict binary scores, where TP and TN were assigned a value of 1 only if all true signals were recovered and no spurious sets were generated, and 0 otherwise. 
+
+```{r}
+
+
+```
+
+\newpage
+
+# Methods
+
+## Model
+
+Recall the interaction model (1):
+$$
+y_i = \beta_0 + \sum_{j=1}^p \beta_j x_{ij} + \sum_{s=1}^q \alpha_s z_{is} + \sum_{j=1}^p \sum_{j'=1}^p \theta_{jj'} x_{ij} x_{ij'} + \sum_{j=1}^p \sum_{s=1}^q \gamma_{js} x_{ij} z_{is} + \epsilon_i,
+$$
+which is shown in Overview of SuSiE4X. The matrix form of this model is
+$$
+\boldsymbol y = \beta_0 \mathbf{1} + \mathbf{X} \boldsymbol\beta + \mathbf{Z} \boldsymbol\alpha + \mathbf{W} \boldsymbol\theta + \mathbf{V} \boldsymbol\gamma + \boldsymbol\epsilon,
+$$
+where $\boldsymbol y=(y_1,\dots,y_n)^\top$, $\mathbf{X}=(\boldsymbol x_1,\dots,\boldsymbol x_n)$ is the $(n \times p)$ matrix of genetic variants with $\boldsymbol x_i=(x_{i1},\dots,x_{ip})^\top$, $\mathbf{Z}=(\boldsymbol z_1,\dots,\boldsymbol z_n)$ is the $(n \times q)$ matrix of environmental variables with $\boldsymbol z_i=(x_{z1},\dots,z_{iq})^\top$, $\mathbf{W}$ is the $(n \times (p(p+1)/2))$ matrix containing all pairwise products $x_{ij}x_{ij'}$ for $1 \leq j \leq j' \leq p$, $\mathbf{V}$ is the $(n \times(pq))$ matrix of G×E interaction terms with entries $x_{ij}z_{is}$ for $1 \leq j \leq p$ and $1\leq s\leq q$, $\boldsymbol\beta=(\beta_1,\dots,\beta_p)^\top$, $\boldsymbol\alpha=(\alpha_1,\dots,\alpha_q)^\top$, $\boldsymbol\theta=(\theta_{11},\dots,\theta_{pp})^\top$, $\boldsymbol\gamma=(\gamma_{11},\dots,\gamma_{pq})^\top$, $\boldsymbol\epsilon =(\epsilon_1,\dots,\epsilon_n)^\top \sim \mathcal{N}(\mathbf{0}, \sigma^2 \mathbf{I}_n)$, and $n$ is the sample size.
+
+To impose biologically meaningful structure and ensure model interpretability, we adopt the strong heredity constraint:
+$$
+\theta_{jj'} \neq 0 \ \Rightarrow\ \beta_j \neq 0 \ \mathrm{and} \ \beta_{j'} \neq 0,\quad
+\gamma_{js} \neq 0 \ \Rightarrow\ \beta_j \neq 0 \ \mathrm{and} \ \alpha_s \neq 0,
+$$
+which meaning that any G×G or G×E interaction term can be nonzero only if both corresponding main effects are included in the model. This structure ensures that interaction effects are interpreted in the context of their associated marginal effects, which aligns with prior biological knowledge and improves model stability [@choi2010variable;@bien2013lasso;@lim2015learning]. An alternative formulation, known as weak heredity, only requires that at least one associated main effect is present (e.g., $\theta_{jj'} \neq 0 \Rightarrow \beta_j \neq 0$ or $\beta_{j'} \neq 0$) [@bien2013lasso]. However, some statisticians argue that models violating strong heredity are not scientifically meaningful. For example, according to @mccullagh2019generalized:
+
+- “There is usually no reason to postulate a special position for the origin, so that the linear terms must be included with the cross-term.”
+
+This viewpoint emphasizes that interaction terms without their associated main effects lack theoretical justification, particularly in generalized linear models where interpretability around the baseline is essential.
+
+## Credible set
+
+In human genetics, the Pearson's correlation between genetic variants is known as LD [@slatkin2008linkage]. Within a genomic locus, LD between variants can be extremely high, sometimes approaching duplication, making it challenging to distinguish one variant from another statistically. To address the difficulty of pinpointing causal variants in regions of high LD, @wang2020simple introduced the concept of credible sets. Mathematically, they define:
+
+- A level-$\rho$ credible set $\mathcal C(\rho)$ is defined to be a subset of variables that has probability $\rho$ or greater of containing at least one effect variable (i.e., a variable with non-zero regression coefficient). Equivalently, the probability that all variables in the credible set have zero regression coefficients is $1 - \rho$ or less.
+
+Rather than identifying a single causal variant, their goal is to report as many such credible sets as supported by the data, each containing as few variables as possible. That is, under the current data constraints, credible sets may include one or more truly causal variants at a level-$\rho$ (typically $\rho = 0.95$), but due to high LD among variants, it is not possible to further distinguish which specific variant(s) within the set are truly causal. Empirical studies show that a credible set usually contains a large number of variants: for instance, @sun2023plasma reported in their protein QTL analysis that a credible set contained an average of 20.5 variants, with some sets including as many as 3,189 variants. Note that we will simplify $\mathcal C(\rho)$ as $\mathcal C$ when no ambiguity arises in the rest of the paper.
+
+## SuSiE priors
+
+\citet{wang2020simple} proposed the "Sum of Single Effects" (SuSiE) prior, a Bayesian framework that enables efficient and automated identification of credible sets in fine-mapping problems. SuSiE is originally designed for the multiple linear regression model $\boldsymbol{y} = \mu \mathbf{1} + \mathbf{X} \boldsymbol{\beta} + \boldsymbol{\epsilon}$, where $\mathbf{X}$ contains genotypes at a locus, and $\boldsymbol{\epsilon} \sim \mathcal{N}(\mathbf{0}, \sigma^2 \mathbf{I}_n)$. The key idea is to decompose the effect vector as
+$$
+\boldsymbol{\beta} = \sum_{l=1}^{L_\beta} \boldsymbol{\beta}_l,\quad
+\boldsymbol{\beta}_l = b_l \boldsymbol{\delta}^\beta_l,\quad
+\boldsymbol{\delta}^\beta_l \sim \mathrm{Mult}(1, \boldsymbol{\pi}),\quad
+b_l \sim \mathcal{N}(0, \sigma_{b_l}^2),
+$$
+where each $\boldsymbol{\delta}^\beta_l$ is a one-hot vector indicating the single variable selected by the $l$th component, and $\boldsymbol{\pi}$ is typically set to the uniform prior $\boldsymbol{\pi} = (1/p, \dots, 1/p)^\top$. Although each $\boldsymbol{\delta}^\beta_l$ is restricted to select a single variable a prior, the posterior distribution $\mathrm{E}(\boldsymbol{\delta}^\beta_l|\mathrm{data})$ is usually diffuse due to LD, allocating mass across a group of highly correlated variants. For example, consider a simple case where $y_i = x_{1i} + x_{2i} + \epsilon_i$ and $x_{1i} = x_{2i}$ for all $i$. Under the SuSiE prior with $L_\beta = 1$, the posterior assigns equal mass to the two variables: $\mathrm{E}(\delta_{11}^\beta|\mathrm{data}) = \mathrm{E}(\delta_{21}^\beta|\mathrm{data}) = 0.5$, and the resulting credible set is $\mathcal{C}^\beta_1 = \{1, 2\}$. This correctly reflects that one or both of the two variables may be causal, but the data do not allow us to identify which ones. Such uncertainty is common in fine-mapping applications due to the high LD structure of the genome, and SuSiE's prior structure is specifically designed to capture and represent this uncertainty by using credible sets.
+
+## SuSiE priors to interactions
+
+For the interaction model (3), we similarly place a SuSiE prior on the environmental effects $\boldsymbol{\alpha}$ in the same form as for the genetic main effects $\boldsymbol{\beta}$:
+$$
+\boldsymbol{\alpha} = \sum_{l=1}^{L_\alpha} \boldsymbol{\alpha}_l,\quad
+\boldsymbol{\alpha}_l = a_l \boldsymbol{\delta}^\alpha_l,\quad
+\boldsymbol{\delta}^\alpha_l \sim \mathrm{Mult}(1, \boldsymbol{\pi}),\quad
+a_l \sim \mathcal{N}(0, \sigma_{a_l}^2).
+$$
+
+To enforce the strong heredity constraint while extending the concept of credible set for interactions, we propose an alternative representation of G$\times$G and G$\times$E terms based on the original model (3). Specifically, let $\mathbf{\Delta}_\beta = (\boldsymbol{\delta}^\beta_1, \dots, \boldsymbol{\delta}^\beta_{L_\beta})$ and 
+$\mathbf{\Delta}_\alpha = (\boldsymbol{\delta}^\alpha_1, \dots, \boldsymbol{\delta}^\alpha_{L_\alpha})$ denote the binary indicator matrices for $\boldsymbol{\beta}$ and $\boldsymbol{\alpha}$, respectively. Then we use them to construct reduced main-effect design matrices: $\tilde{\mathbf{X}} = \mathbf{X} \mathbf{\Delta}_\beta$ and $\tilde{\mathbf{Z}} = \mathbf{Z} \mathbf{\Delta}_\alpha$
+which are $(n \times L_\beta)$ and $(n \times L_\alpha)$ matrices, respectively.  Next, we define the interaction basis matrices $\check{\mathbf{W}}$ and $\check{\mathbf{V}}$ by taking element-wise products of the reduced main-effect design matrices. Specifically, $\check{\mathbf{W}}$ is an $(n \times \tfrac{L_\beta(L_\beta+1)}{2})$ matrix containing all pairwise products between columns of $\tilde{\mathbf{X}}$, representing candidate G$\times$G interactions; $\check{\mathbf{V}}$ is an $(n \times L_\beta L_\alpha)$ matrix containing all pairwise products between columns of $\tilde{\mathbf{X}}$ and $\tilde{\mathbf{Z}}$, representing candidate G$\times$E interactions, each elements of which are given by
+$$
+\check{W}_{i,(l,l')} = \tilde{X}_{il} \tilde{X}_{il'}, \qquad
+\check{V}_{i,(l,s)} = \tilde{X}_{il} \tilde{Z}_{is}.
+$$
+We refer to these as the interactions of credible sets. The model (3) can be rewritten as:
+$$
+\boldsymbol y = \beta_0 \mathbf{1} + \mathbf{X} \boldsymbol\beta + \mathbf{Z} \boldsymbol\alpha + \check{\mathbf{W}} \check{\boldsymbol\theta} + \check{\mathbf{V}} \check{\boldsymbol\gamma} + \boldsymbol{\epsilon},
+$$
+where $\check{\boldsymbol{\theta}}$ and $\check{\boldsymbol{\gamma}}$ are the interaction effect vectors defined over $\check{\mathbf{W}}$ and $\check{\mathbf{V}}$. Furthermore, we place SuSiE priors on the interaction coefficients:
+$$
+\check{\boldsymbol{\theta}} = \sum_{l=1}^{L_\theta} \boldsymbol{\theta}_l,\quad
+\boldsymbol{\theta}_l = \vartheta_l \boldsymbol{\delta}^\theta_l,\quad
+\boldsymbol{\delta}^\theta_l \sim \mathrm{Mult}(1, \boldsymbol{\pi}),\quad
+\vartheta_l \sim \mathcal{N}(0, \sigma_{\vartheta_l}^2),
+$$
+$$
+\check{\boldsymbol{\gamma}} = \sum_{l=1}^{L_\gamma} \boldsymbol{\gamma}_l,\quad
+\boldsymbol{\gamma}_l = r_l \boldsymbol{\delta}^\gamma_l,\quad
+\boldsymbol{\delta}^\gamma_l \sim \mathrm{Mult}(1, \boldsymbol{\pi}),\quad
+r_l \sim \mathcal{N}(0, \sigma_{r_l}^2).
+$$
+and define the corresponding interaction design matrices as
+$\tilde{\mathbf{W}} = \check{\mathbf{W}} \mathbf{\Delta}_\theta$ and $\tilde{\mathbf{V}} = \check{\mathbf{V}} \mathbf{\Delta}_\gamma$, where $\mathbf{\Delta}_\theta = (\boldsymbol{\delta}^\theta_1, \dots, \boldsymbol{\delta}^\theta_{L_\theta})$ and
+$\mathbf{\Delta}_\gamma = (\boldsymbol{\delta}^\gamma_1, \dots, \boldsymbol{\delta}^\gamma_{L_\gamma})$. Substituting these into the reduced form of the model yields
+$$
+\mathbf{y} = \beta_0 \mathbf{1} + \tilde{\mathbf{X}} \boldsymbol{b} + \tilde{\mathbf{Z}} \boldsymbol{a} + \tilde{\mathbf{W}} \boldsymbol{\vartheta} + \tilde{\mathbf{V}} \boldsymbol{r} + \boldsymbol{\epsilon},
+$$
+where $\boldsymbol{b}=(b_1,\dots,b_{L_\beta})^\top, \boldsymbol{a}=(a_1,\dots,a_{L_\alpha})^\top, \boldsymbol{\vartheta}=(\vartheta_1,\dots,\vartheta_{L_\theta})^\top$, and $\boldsymbol{r}=(r_1,\dots,r_{L_\gamma})^\top$. 
+This alternative representation ensures that every interaction term in $\tilde{\mathbf{W}}$ or $\tilde{\mathbf{V}}$ arises only from variants already selected in the main effects, thereby automatically enforcing the strong heredity constraint.
+
+We refer to this formulation as modeling interactions of credible sets, since each column of $\check{\mathbf{W}}$ or $\check{\mathbf{V}}$ is constructed from variables that appear in the weighted main-effect matrices $\tilde{\mathbf{X}}=\mathbf X\mathbf\Delta_{\beta}$ and $\tilde{\mathbf{Z}}=\mathbf Z\mathbf\Delta_{\alpha}$, which sum the variables in SuSiE's credible sets using the binary indicators. Rather than modeling G×G and G×E interactions between individual variants and environmental factors, we model interactions between sets of variables, which consist of multiple variable pairs, one from each set, that are likely to exhibit a nonzero interaction effect. This representation is particularly well-suited for genetic data, where strong LD often makes it statistically impossible to distinguish which exact variant pair drives the interaction. For example, suppose that variants $x_1$ and $x_2$ are in perfect LD and both appear with equal posterior probability in a credible set $\mathcal{C}^\beta_1 = \{1, 2\}$. Suppose further that another variant $x_3$ is included in a separate credible set $\mathcal{C}^\beta_2 = \{3\}$. In this case, we may not be able to tell whether the true interaction is between $(x_1, x_3)$ or $(x_2, x_3)$, but we can still infer that there exists an interaction between $\mathcal{C}^\beta_1$ and $\mathcal{C}^\beta_2$. The interaction basis matrix $\check{\mathbf{W}}$ will include columns for both $(1,3)$ and $(2,3)$, and the SuSiE prior allows the posterior to distribute mass over these possibilities. As a result, the interaction credible set $\mathcal{C}^\theta_l = \{(\mathcal{C}^\beta_1,\mathcal{C}^\beta_2)\}$ encodes the uncertainty that at least one variable pair, comprising one variant from $\mathcal{C}^\beta_1$ (i.e., $x_1$ or $x_2$) and one from $\mathcal{C}^\beta_2$ (i.e., merely $x_3$), exhibits a nonzero G×G interaction effect.
+
+## Implementation
+
+SuSiE4X operates through the sufficient-statistic interface of `susie_suff_stat()`, which requires as input the covariance matrix (XtX), the cross-product vector (Xty), and the quadratic form of the outcome (yty). For biobank-scale datasets with hundreds of thousands of individuals, computing XtX directly is computationally prohibitive.  We implement blockwise chunking in C++: partitioning the genotype matrix into row blocks, computing partial cross-products in parallel, then aggregating results. This reduces memory usage and runtime substantially. By default, SuSiE4X standardizes both genotype ($\mathbf X$) and environment ($\mathbf Z$) matrices so that each column has mean zero and variance one, ensuring that effect sizes are comparable across variables.
+
+Estimation proceeds via a blockwise profile-likelihood algorithm, partitioning parameters into environmental effects $\boldsymbol\alpha$, main genetic effects $\boldsymbol\beta$, and interaction effects $\boldsymbol\vartheta$ (for $\tilde{\mathbf W}$) and $\boldsymbol r$ (for $\tilde{\mathbf V}$). At iteration $t$, each block is updated as follows. First, with $\boldsymbol\beta^{(t)}$, $\boldsymbol\vartheta^{(t)}$, and $\boldsymbol r^{(t)}$ cosidered as fixed, the residual is
+$$
+\boldsymbol y_\alpha^{(t)} = \boldsymbol y - \mathbf X \boldsymbol\beta^{(t)} - \tilde{\mathbf W}^{(t)} \boldsymbol\vartheta^{(t)} - \tilde{\mathbf V}^{(t)} \boldsymbol r^{(t)}.
+$$
+Updating $\boldsymbol\alpha$ uses sufficient statistics: 
+$$
+\mathrm{XtX} = \mathbf Z^\top \mathbf Z,\quad\mathrm{Xty} = \mathbf Z^\top \boldsymbol y_\alpha^{(t)},\quad \mathrm{yty} = \boldsymbol y_\alpha^{(t)\top}\boldsymbol y_\alpha^{(t)}.
+$$
+
+With $\boldsymbol\alpha^{(t+1)}$, $\boldsymbol\vartheta^{(t)}$, and $\boldsymbol r^{(t)}$ fixed, the residual is
+$$
+\boldsymbol y_\beta^{(t)} = \boldsymbol y - \mathbf Z \boldsymbol\alpha^{(t+1)} - \tilde{\mathbf W}^{(t)} \boldsymbol\vartheta^{(t)} - \tilde{\mathbf V}^{(t)} \boldsymbol r^{(t)}.
+$$
+Updating $\boldsymbol\beta$ uses sufficient statistics: 
+$$\mathrm{XtX} = \mathbf X^\top \mathbf X,\quad\mathrm{Xty} = \mathbf X^\top \boldsymbol y_\beta^{(t)},\quad\mathrm{yty} = \boldsymbol y_\beta^{(t)\top}\boldsymbol y_\beta^{(t)}.$$
+
+We next jointly update the interaction parameters $\boldsymbol\vartheta$ and $\boldsymbol r$.
+With $\boldsymbol\alpha^{(t+1)}$ and $\boldsymbol\beta^{(t+1)}$ fixed, the residual is
+$$
+\boldsymbol y_\eta^{(t)} = \boldsymbol y - \mathbf Z \boldsymbol\alpha^{(t+1)} - \mathbf X \boldsymbol\beta^{(t+1)}.
+$$
+To enforce the strong heredity constraint, interaction terms are only considered among variables that are already selected in the main-effect blocks. Hence, we reconstruct the interaction design matrices from the credible sets selected in the previous two blocks. Let $\tilde{\mathbf X}^{(t+1)} = \mathbf X \mathbf\Delta_\beta^{(t+1)}$ and $\tilde{\mathbf Z}^{(t+1)} = \mathbf Z \mathbf\Delta_\alpha^{(t+1)}$, where $\mathbf\Delta_\beta^{(t+1)}$ and $\mathbf\Delta_\alpha^{(t+1)}$ are indicator matrices summarizing the SuSiE credible sets for $\boldsymbol\beta$ and $\boldsymbol\alpha$. The candidate interaction basis is then constructed as $\check{W}_{i,(l,l')}^{(t+1)} = \tilde{X}_{il}^{(t+1)} \tilde{X}_{il'}^{(t+1)}$ and $\check{V}_{i,(l,s)}^{(t+1)} = \tilde{X}_{il}^{(t+1)} \tilde{Z}_{is}^{(t+1)}$.
+We then define the combined interaction matrix and parameter vector as
+$$
+\check{\mathbf U}^{(t)} = \big(\check{\mathbf W}^{(t)}, \check{\mathbf V}^{(t)}\big), \qquad
+\boldsymbol\eta^{(t)} = \big(\boldsymbol\vartheta^{(t)\top}, \boldsymbol r^{(t)\top}\big)^\top.
+$$
+Updating $\boldsymbol\eta$ uses sufficient statistics: 
+$$
+\mathrm{XtX} = \check{\mathbf U}^{(t)\top}\check{\mathbf U}^{(t)},\quad\mathrm{Xty} = \check{\mathbf U}^{(t)\top}\boldsymbol y_\eta^{(t)},\quad\mathrm{yty} = \boldsymbol y_\eta^{(t)\top}\boldsymbol y_\eta^{(t)}.
+$$
+
+Convergence is assessed based on $\boldsymbol\alpha$ and $\boldsymbol\beta$, as stability of these two blocks suffices for the entire algorithm. The interaction block may fluctuate, but convergence is typically achieved within five iterations, with 
+$$\max(\|\boldsymbol\beta^{(t+1)} - \boldsymbol\beta^{(t)}\|_2,\|\boldsymbol\alpha^{(t+1)} - \boldsymbol\alpha^{(t)}\|_2) < 1^{-5}.
+$$ 
+
+
+The choice of $L_\beta$, $L_\alpha$, and $L_\theta+L_\gamma$ (which are jointly considered in the algorithm) follows the strategy in SuSiE [@yuan2024fine]. We set $L=5$ ($L$ refers to one among $L_\beta$, $L_\alpha$, and $L_\theta+L_\gamma$) as the default; if the model fails to converge, $L$ is reduced stepwise until convergence. If the model converges with $L=5$ and returns five credible sets, suggesting that additional sets may exist, we increase $L$ to 10 and repeat the procedure, again reducing $L$ stepwise if necessary.
+
+Illustration of SuSiE4X. A: LD structure of 30 genetic variants within a genomic locus in the UK Biobank cohort (n = 354,350 European individuals). The heatmap displays pairwise Pearson correlation coefficients between variants, ranging from $+1$ (blue) to $-1$ (red). Variants are labeled by their rsID followed by the effect allele (e.g., \texttt{rs11206439\textunderscore A} indicates A is the effect allele). Pie segments are colored green for strong positive LD and brown for strong negative LD. B: Traditional variable-wise interaction modeling framework. Each variant is treated as a separate unit, and interaction effects are defined between individual variant pairs. C: Credible-set-based interaction modeling. The model considers interactions between credible sets. It constructs all pairwise interaction terms between variants in two different credible sets (e.g., $\mathcal{C}_1 \times \mathcal{C}_2$), and also allows for within-set interactions, i.e., pairwise interactions between variants in the same credible set (e.g., $\mathcal{C}_1 \times \mathcal{C}_1$).
+
+\newpage
+# Reference
