@@ -10,7 +10,7 @@
 #' @param k_min,k_max Integers giving the search range for the number of
 #'   factors `m`. Defaults are `k_min = 5` and
 #'   `k_max = min(15, floor(nrow(S) / 2))`.
-#' @param lam_vec A vector of candidate shrinkage parameters. Default is `seq(0.025, 0.25, by = 0.025)`.
+#' @param shrinkage_vec A vector of candidate shrinkage parameters. Default is `seq(0.025, 0.25, by = 0.025)`.
 #' @param eigenmin The threshold for the minimum eigenvalues used in determining the optimal shrinkage parameter. Default is `1e-3`.
 #'
 #' @return A covariance matrix that has been shrunk using the POET method.
@@ -18,7 +18,7 @@
 #' @importFrom CppMatrix matrixInverse matrixMultiply matrixVectorMultiply matrixEigen matrixListProduct
 #' @export
 #'
-poet_linear_shrinkage=function(S,n,cutoff_method="D.ratio",k_min=5,k_max=min(15,round(nrow(S)/2)),lam_vec=seq(0.025,0.25,by=0.025),eigenmin=1e-3){
+poet_linear_shrinkage=function(S,n,cutoff_method="D.ratio",k_min=5,k_max=min(15,round(nrow(S)/2)),shrinkage_vec=seq(0.025,0.25,by=0.025),eigenmin=1e-3){
 p=ncol(S)
 S[is.na(S)]=0;
 diag(S)=1
@@ -66,9 +66,9 @@ hatc=(sum(diag(S))-sum(dk))/(p-pck-pck*p/n)
 dk <- pmax(dk - hatc*p/n, 0)
 P=matrixMultiply(Uk,t(Uk)*dk)
 E=S-P;e=diag(E);e[e<0]=max(hatc,0.01);diag(E)=e
-eigenvec=lam_vec
-for(i in 1:length(lam_vec)){
-E1=E*(1-lam_vec[i])+diag(diag(E))*lam_vec[i]
+eigenvec=shrinkage_vec
+for(i in 1:length(shrinkage_vec)){
+E1=E*(1-shrinkage_vec[i])+diag(diag(E))*shrinkage_vec[i]
 eigenvec=min(matrixEigen(E1)$values)
 if(eigenvec>eigenmin) break
 }

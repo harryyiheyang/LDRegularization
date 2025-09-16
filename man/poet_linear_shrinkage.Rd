@@ -10,7 +10,7 @@ poet_linear_shrinkage(
   cutoff_method = "D.ratio",
   k_min = 5,
   k_max = min(15, round(nrow(S)/2)),
-  lam_vec = seq(0.025, 0.25, by = 0.025),
+  shrinkage_vec = seq(0.025, 0.25, by = 0.025),
   eigenmin = 0.001
 )
 }
@@ -27,7 +27,7 @@ factors `m`. One of `"D.ratio"` or `"ratio"` (default: `"D.ratio"`).}
 factors `m`. Defaults are `k_min = 5` and
 `k_max = min(15, floor(nrow(S) / 2))`.}
 
-\item{lam_vec}{A vector of candidate shrinkage parameters. Default is `seq(0.025, 0.25, by = 0.025)`.}
+\item{shrinkage_vec}{A vector of candidate shrinkage parameters. Default is `seq(0.025, 0.25, by = 0.025)`.}
 
 \item{eigenmin}{The threshold for the minimum eigenvalues used in determining the optimal shrinkage parameter. Default is `1e-3`.}
 }
