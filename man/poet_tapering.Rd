@@ -9,41 +9,34 @@ poet_tapering(
   n,
   cutoff_method = "D.ratio",
   k_min = 5,
-  k_max = min(15, round(nrow(S)/2)),
+  k_max = min(15, floor(nrow(S)/2)),
   tapering_vec = seq(2, 20, 2),
-  eigenmin = 0.001
+  k_gap = 2,
+  eigenmin = 0.001,
+  return_correlation = TRUE
 )
 }
 \arguments{
-\item{S}{A symmetric matrix (p×p). It can be a covariance matrix or a
-correlation matrix.}
+\item{S}{A symmetric matrix (p×p): covariance OR correlation.}
 
-\item{n}{The sample size that produced `S`.}
+\item{n}{Sample size used to estimate S.}
 
-\item{cutoff_method}{Character string specifying how to choose the number of
-factors `m`. One of `"D.ratio"` or `"ratio"` (default: `"D.ratio"`).}
+\item{cutoff_method}{"D.ratio" (default) or "ratio" for picking #factors m.}
 
-\item{k_min, k_max}{Integers giving the search range for the number of
-factors `m`. Defaults are `k_min = 5` and
-`k_max = min(15, floor(nrow(S) / 2))`.}
+\item{k_min, k_max}{Search range for m. Defaults: 5 and min(15, floor(p/2)).}
 
-\item{tapering_vec}{Integer vector of candidate bandwidths for tapering.
-For each bandwidth `b`, the idiosyncratic matrix `Σ_u` is multiplied
-elementwise by a tapering kernel `wij(b)` that decreases with
-band distance `|i - j|` (e.g., Bartlett/linear taper:
-`wij = max(1 - |i-j|/b, 0)`). Default: `seq(2, 20, 2)`.
-Use `0` to keep only the diagonal (degenerates to diagonal idiosyncratic part).}
+\item{tapering_vec}{Candidate taper bandwidths (passed to `tapering()`).}
 
-\item{eigenmin}{The threshold for the minimum eigenvalues used in determining the optimal shrinkage parameter. Default is `1e-3`.}
+\item{k_gap}{Taper reach multiplier in `tapering()` (2 ⇒ to 2k, 3 ⇒ to 3k).}
+
+\item{eigenmin}{Minimum eigenvalue floor used inside `tapering()`. Default 1e-3.}
+
+\item{return_correlation}{Logical; if TRUE return correlation, else covariance. Default TRUE.}
 }
 \value{
-A covariance matrix (p×p) regularized by POET + tapering; symmetric
-  and positive semi-definite up to `eigenmin`.
+A PSD matrix (p×p): correlation if return_correlation=TRUE, else covariance.
 }
 \description{
-Apply the POET framework where the factor component is estimated from the
-leading eigenpairs and the idiosyncratic component is tapered (entrywise
-multiplied by a tapering kernel with bandwidth chosen from `tapering_vec`).
-Note: tapering assumes variables are ordered on a meaningful 1D index
-(e.g., time or spatial lattice); otherwise band distance |i - j| has no meaning.
+Factor+Sparse (POET) regularization where the factor part uses the top
+eigenpairs of S and the idiosyncratic part is tapered entrywise.
 }
