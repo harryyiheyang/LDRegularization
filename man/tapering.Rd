@@ -2,27 +2,29 @@
 % Please edit documentation in R/tapering.R
 \name{tapering}
 \alias{tapering}
-\title{Tapering Regularization for LD Matrix}
+\title{Tapering Regularization for LD Matrix (with configurable k_gap)}
 \usage{
-tapering(A, k_vec = seq(2, 10), eigenmin = 0.01, print = FALSE)
+tapering(A, k_vec = seq(2, 10), k_gap = 2, eigenmin = 0.01, print = FALSE)
 }
 \arguments{
 \item{A}{A symmetric matrix (e.g., LD matrix).}
 
-\item{k_vec}{A vector of candidate tapering bandwidths (default: 2:10).}
+\item{k_vec}{A vector of candidate bandwidths (default: 2:10).}
+
+\item{k_gap}{Taper reach multiplier (>= 1). k_gap = 2 means taper to 0 by 2k; k_gap = 3 means by 3k. Default: 2.}
 
 \item{eigenmin}{Minimum eigenvalue threshold (default: 0.01).}
 
-\item{print}{Logical; if TRUE, prints the chosen k and the minimum eigenvalue.}
+\item{print}{Logical; if TRUE, prints chosen k and min eigenvalue.}
 }
 \value{
 The regularized matrix after tapering.
 }
 \description{
 Apply tapering regularization to a symmetric matrix.
-For a given bandwidth parameter k, entries within |i-j| <= k are kept,
-entries with k < |i-j| <= 2k are linearly tapered to 0, and entries with
-|i-j| > 2k are set to 0. The function searches over a sequence of k values
-(k_vec) and chooses the smallest k for which the minimum eigenvalue of the
-regularized matrix is at least eigenmin.
+For a given bandwidth k, entries with |i - j| <= k are kept as 1,
+entries with k < |i - j| <= k_gap * k are linearly tapered to 0,
+and entries with |i - j| > k_gap * k are set to 0.
+The function searches over k_vec and returns the first matrix whose
+minimum eigenvalue is at least eigenmin (else it returns the last one).
 }
