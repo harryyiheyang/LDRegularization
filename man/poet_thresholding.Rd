@@ -2,45 +2,25 @@
 % Please edit documentation in R/poet_thresholding.R
 \name{poet_thresholding}
 \alias{poet_thresholding}
-\title{poet_thresholding: POET with entrywise thresholding on the idiosyncratic covariance}
+\title{POET with MCP thresholding and FSPD positive-definite modification}
 \usage{
-poet_thresholding(
-  S,
-  n,
-  cutoff_method = "D.ratio",
-  k_min = 5,
-  k_max = min(15, round(nrow(S)/2)),
-  thresholding_vec = seq(0.01, 0.2, by = 0.02),
-  eigenmin = 0.001
-)
+poet_thresholding(S, n, lambda = NULL, eigenmin = 0.001)
 }
 \arguments{
-\item{S}{A symmetric matrix (p×p). It can be a covariance matrix or a
-correlation matrix.}
+\item{S}{Symmetric covariance or correlation matrix.}
 
-\item{n}{The sample size that produced `S`.}
+\item{n}{Sample size used to form `S`.}
 
-\item{cutoff_method}{Character string specifying how to choose the number of
-factors `m`. One of `"D.ratio"` or `"ratio"` (default: `"D.ratio"`).}
+\item{lambda}{Optional scalar threshold. Overrides the theoretical default.
+If missing, `2 * max(sqrt(log(p) / n), 1 / sqrt(p))` is used.}
 
-\item{k_min, k_max}{Integers giving the search range for the number of
-factors `m`. Defaults are `k_min = 5` and
-`k_max = min(15, floor(nrow(S) / 2))`.}
-
-\item{thresholding_vec}{Numeric vector of candidate thresholding levels for
-the off-diagonal entries of the idiosyncratic covariance.
-Default: `seq(0.01, 0.20, by = 0.02)`.}
-
-\item{eigenmin}{The threshold for the minimum eigenvalues used in determining the optimal shrinkage parameter. Default is `1e-3`.}
+\item{eigenmin}{Minimum eigenvalue target for FSPD. Default is 0.001.}
 }
 \value{
-A covariance matrix (p×p) regularized by POET + entrywise
-  thresholding; symmetric and positive semi-definite up to `eigenmin`.
+A positive-definite POET regularized correlation matrix.
 }
 \description{
-Apply the POET framework where the factor component is estimated from the
-leading eigenpairs and the idiosyncratic component is regularized by
-entrywise thresholding. Off-diagonal elements are thresholded with a
-candidate parameter chosen from `thresholding_vec`; the diagonal is kept.
-The number of latent factors is selected by a ratio-type rule.
+Estimate a factor component from the leading eigenpairs of `S`, threshold the
+idiosyncratic covariance on correlation scale, and apply FSPD linear
+shrinkage to the sparse idiosyncratic estimator.
 }

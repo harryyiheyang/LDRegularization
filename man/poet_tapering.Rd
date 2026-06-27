@@ -2,41 +2,27 @@
 % Please edit documentation in R/poet_tapering.R
 \name{poet_tapering}
 \alias{poet_tapering}
-\title{poet_tapering: POET with tapering on the idiosyncratic covariance}
+\title{POET with tapering and FSPD positive-definite modification}
 \usage{
-poet_tapering(
-  S,
-  n,
-  cutoff_method = "D.ratio",
-  k_min = 5,
-  k_max = min(15, floor(nrow(S)/2)),
-  tapering_vec = seq(2, 20, 2),
-  k_gap = 2,
-  eigenmin = 0.001,
-  return_correlation = TRUE
-)
+poet_tapering(S, n, K = NULL, alpha = 1, eigenmin = 0.001)
 }
 \arguments{
-\item{S}{A symmetric matrix (p×p): covariance OR correlation.}
+\item{S}{Symmetric covariance or correlation matrix.}
 
-\item{n}{Sample size used to estimate S.}
+\item{n}{Sample size used to form `S`.}
 
-\item{cutoff_method}{"D.ratio" (default) or "ratio" for picking #factors m.}
+\item{K}{Optional bandwidth. Overrides the theoretical default.}
 
-\item{k_min, k_max}{Search range for m. Defaults: 5 and min(15, floor(p/2)).}
+\item{alpha}{Bandable covariance smoothness parameter used in the theoretical
+bandwidth. Default is 1.}
 
-\item{tapering_vec}{Candidate taper bandwidths (passed to `tapering()`).}
-
-\item{k_gap}{Taper reach multiplier in `tapering()` (2 ⇒ to 2k, 3 ⇒ to 3k).}
-
-\item{eigenmin}{Minimum eigenvalue floor used inside `tapering()`. Default 1e-3.}
-
-\item{return_correlation}{Logical; if TRUE return correlation, else covariance. Default TRUE.}
+\item{eigenmin}{Minimum eigenvalue target for FSPD. Default is 0.001.}
 }
 \value{
-A PSD matrix (p×p): correlation if return_correlation=TRUE, else covariance.
+A positive-definite POET regularized correlation matrix.
 }
 \description{
-Factor+Sparse (POET) regularization where the factor part uses the top
-eigenpairs of S and the idiosyncratic part is tapered entrywise.
+Estimate a factor component from the leading eigenpairs of `S`, taper the
+idiosyncratic covariance, and apply FSPD linear shrinkage to the sparse
+idiosyncratic estimator.
 }

@@ -2,29 +2,29 @@
 % Please edit documentation in R/tapering.R
 \name{tapering}
 \alias{tapering}
-\title{Tapering Regularization for LD Matrix (with configurable k_gap)}
+\title{Tapering regularization with FSPD positive-definite modification}
 \usage{
-tapering(A, k_vec = seq(2, 10), k_gap = 2, eigenmin = 0.01, print = FALSE)
+tapering(A, n = NULL, K = NULL, alpha = 1, eigenmin = 0.001)
 }
 \arguments{
-\item{A}{A symmetric matrix (e.g., LD matrix).}
+\item{A}{Symmetric covariance or correlation matrix.}
 
-\item{k_vec}{A vector of candidate bandwidths (default: 2:10).}
+\item{n}{Sample size used to form `A`. Required when `K` is not supplied.}
 
-\item{k_gap}{Taper reach multiplier (>= 1). k_gap = 2 means taper to 0 by 2k; k_gap = 3 means by 3k. Default: 2.}
+\item{K}{Optional bandwidth. If supplied, it overrides the theoretical
+default.}
 
-\item{eigenmin}{Minimum eigenvalue threshold (default: 0.01).}
+\item{alpha}{Bandable covariance smoothness parameter used in the theoretical
+bandwidth. Default is 1.}
 
-\item{print}{Logical; if TRUE, prints chosen k and min eigenvalue.}
+\item{eigenmin}{Minimum eigenvalue target for FSPD. Default is 0.001.}
 }
 \value{
-The regularized matrix after tapering.
+A positive-definite tapered covariance matrix.
 }
 \description{
-Apply tapering regularization to a symmetric matrix.
-For a given bandwidth k, entries with |i - j| <= k are kept as 1,
-entries with k < |i - j| <= k_gap * k are linearly tapered to 0,
-and entries with |i - j| > k_gap * k are set to 0.
-The function searches over k_vec and returns the first matrix whose
-minimum eigenvalue is at least eigenmin (else it returns the last one).
+Keep entries with `|i - j| <= K`, linearly taper entries until
+`|i - j| <= 2 * K`, and set farther entries to zero. If `K` is not
+supplied, the default bandwidth is capped at `floor(p / 2)`. Positive
+definiteness is enforced afterward by fixed-support linear shrinkage.
 }

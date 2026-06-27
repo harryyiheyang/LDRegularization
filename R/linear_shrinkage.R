@@ -1,40 +1,46 @@
-#' Adaptive Linear Shrinkage for Correlation Matrix
+#' Adaptive linear shrinkage for a correlation matrix
 #'
-#' Apply linear shrinkage to a correlation matrix.
-#' If lambda is not provided, estimate it adaptively from data (Ledoit–Wolf).
+#' Shrink a sample correlation matrix toward a target matrix. If `lambda` is not
+#' supplied, a Ledoit-Wolf-style plug-in value is estimated from the centered
+#' data matrix `X`.
 #'
-#' @param S A symmetric correlation matrix with diagonal elements equal to 1.
-#' @param X Data matrix (n × p), assumed centered (mean zero by column).
-#' @param lambda Shrinkage intensity in [0,1]. If NULL, estimate adaptively.
-#' @param target Target matrix for shrinkage (default: identity).
-#' @param print Logical; if TRUE, print chosen lambda.
+#' @param S Symmetric correlation matrix.
+#' @param X Centered data matrix with the same number of columns as `S`.
+#' @param lambda Optional shrinkage intensity in `[0, 1]`.
+#' @param target Optional shrinkage target. Defaults to the identity matrix.
+#'
 #' @return A regularized correlation matrix after shrinkage.
 #' @export
-linear_shrinkage <- function(S,X,lambda = NULL,target = NULL,print = FALSE) {
-stopifnot(is.matrix(S), nrow(S) == ncol(S))
-stopifnot(is.matrix(X), ncol(X) == ncol(S))
+linear_shrinkage <- function(S, X, lambda = NULL, target = NULL) {
+  S <- .ld_as_square_matrix(S, "S")
+  if (!is.matrix(X)) {
+    X <- as.matrix(X)
+  }
+  if (ncol(X) != ncol(S)) {
+    stop("X must have the same number of columns as S.", call. = FALSE)
+  }
 
-n <- nrow(X)
-p <- ncol(X)
-if (is.null(target)) target <- diag(1, p)
+  p <- ncol(S)
+  if (is.null(target)) {
+    target <- diag(1, p)
+  } else {
+    target <- .ld_as_square_matrix(target, "target")
+    if (!all(dim(target) == c(p, p))) {
+      stop("target must have the same dimensions as S.", call. = FALSE)
+    }
+  }
 
-## symmetrize
-S <- (S + t(S)) / 2
+  S <- .ld_symmetrize(S)
+  target <- .ld_symmetrize(target)
 
-## estimate lambda if NULL
-if (is.null(lambda)) {
-row_norm4 <- rowSums(X^2)^2
-pi_hat <- mean(row_norm4) - sum(S^2)
+  if (is.null(lambda)) {
+    row_norm4 <- rowSums(X^2)^2
+    pi_hat <- mean(row_norm4) - sum(S^2)
+    d2_hat <- sum((S - target)^2)
+    lambda <- if (d2_hat > 0) pi_hat / d2_hat else 1
+  }
 
-d2_hat <- sum((S - target)^2)
+  lambda <- min(max(lambda[1L], 0), 1)
 
-lambda <- max(0, min(1, pi_hat / d2_hat))
-if (print) {
-message("Estimated lambda = ", round(lambda, 4))
-}
-}
-
-## shrinkage
-Sigma_hat <- lambda * target + (1 - lambda) * S
-return(Sigma_hat)
+  .ld_symmetrize(lambda * target + (1 - lambda) * S)
 }

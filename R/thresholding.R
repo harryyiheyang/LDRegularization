@@ -1,70 +1,51 @@
-#' Entrywise MCP thresholding on correlation; PSD check & return covariance
+#' Entrywise MCP thresholding with FSPD positive-definite modification
 #'
-#' @param S        Symmetric matrix; covariance or correlation (diag>=0).
-#' @param lam_vec  Candidate lambdas (increasing), e.g. seq(0.01, 0.10, 0.01)
-#' @param eigenmin Minimum eigenvalue target on covariance scale (default 0.01)
-#' @param print    Whether to print chosen lambda
-#' @param mcp_a    MCP 'a' parameter (default 3)
-#' @importFrom CppMatrix matrixEigen
-#' @return         Regularized covariance matrix (PSD up to eigenmin)
+#' Threshold the off-diagonal entries of the correlation version of a covariance
+#' matrix and map the result back to covariance scale. By default the threshold
+#' is the high-dimensional rate `2 * sqrt(log(p) / n)`. Positive definiteness
+#' is enforced afterward by fixed-support linear shrinkage.
+#'
+#' @param S Symmetric covariance or correlation matrix.
+#' @param n Sample size used to form `S`. Required when `lambda` is not supplied.
+#' @param lambda Optional scalar or matrix threshold. If supplied, it overrides
+#'   the theoretical default.
+#' @param eigenmin Minimum eigenvalue target for FSPD. Default is 0.001.
+#'
+#' @return A positive-definite thresholded covariance matrix.
 #' @export
 thresholding <- function(
-S,
-lam_vec  = seq(0.01, 0.10, by = 0.01),
-eigenmin = 0.01,
-print    = FALSE,
-mcp_a    = 3
+    S,
+    n = NULL,
+    lambda = NULL,
+    eigenmin = 1e-3
 ) {
-stopifnot(is.matrix(S), nrow(S) == ncol(S))
-p <- nrow(S)
-S <- (S + t(S)) / 2
-diag_vals <- sqrt(pmax(diag(S), 0))
-S_cor <- cov2cor(S)
-diag(S_cor) <- 0
+  S <- .ld_as_square_matrix(S, "S")
+  p <- nrow(S)
+  S <- .ld_symmetrize(S)
 
-apply_mcp <- function(M, lam) {
-x <- as.vector(M)
-x_new <- mcp(x, lam = lam, a = mcp_a)
-M_new <- matrix(x_new, nrow = p, ncol = p)
-M_new <- (M_new + t(M_new)) / 2
-diag(M_new) <- 1
-M_new
-}
+  diag_vals <- sqrt(pmax(diag(S), 0))
+  S_cor <- stats::cov2cor(S)
+  S_cor[is.na(S_cor)] <- 0
+  diag(S_cor) <- 0
 
-best_Mcor <- NULL
-best_lam  <- tail(lam_vec, 1L)
-best_min  <- -Inf
+  lambda <- .ld_resolve_threshold(p, n, lambda)
+  if (length(lambda) == 1L) {
+    cut <- lambda
+  } else {
+    cut <- .ld_as_square_matrix(lambda, "lambda")
+    if (!all(dim(cut) == c(p, p))) {
+      stop("lambda matrix must have the same dimensions as S.", call. = FALSE)
+    }
+    diag(cut) <- 0
+  }
 
-for (lam in lam_vec) {
-Mcor  <- apply_mcp(S_cor, lam)
-Sigma <- t(t(Mcor) * diag_vals) * diag_vals
-eigmin <- tryCatch({
-ev <- matrixEigen((Sigma + t(Sigma)) / 2)$values
-min(ev, na.rm = TRUE)
-}, error = function(e) NA_real_)
+  Mcor <- mcp(S_cor, lam = cut, a = 3)
+  Mcor <- .ld_symmetrize(Mcor)
+  diag(Mcor) <- 1
 
-if (!is.na(eigmin) && eigmin >= eigenmin) {
-if (print) message("Selected lambda = ",lam," with min eigenvalue = ", round(eigmin, 6))
-best_Mcor <- Mcor
-best_lam  <- lam
-break
-}
-if (!is.na(eigmin) && eigmin > best_min) {
-best_min  <- eigmin
-best_lam  <- lam
-best_Mcor <- Mcor
-}
-}
+  Sigma <- t(t(Mcor) * diag_vals) * diag_vals
+  Sigma <- .ld_symmetrize(Sigma)
+  diag(Sigma) <- diag_vals^2
 
-if (is.null(best_Mcor)) best_Mcor <- apply_mcp(S_cor, tail(lam_vec, 1L))
-
-Sigma <- t(t(best_Mcor) * diag_vals) * diag_vals
-Sigma <- (Sigma + t(Sigma)) / 2
-diag(Sigma) <- diag_vals^2
-
-if (print && best_min > -Inf) {
-message("No lambda met eigenmin; using lambda = ", best_lam,
-    " with best min eigenvalue ≈ ", round(best_min, 6))
-}
-Sigma
+  .ld_fspd(Sigma, eigenmin = eigenmin)
 }

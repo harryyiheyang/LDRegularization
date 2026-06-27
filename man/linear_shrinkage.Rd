@@ -2,25 +2,24 @@
 % Please edit documentation in R/linear_shrinkage.R
 \name{linear_shrinkage}
 \alias{linear_shrinkage}
-\title{Adaptive Linear Shrinkage for Correlation Matrix}
+\title{Adaptive linear shrinkage for a correlation matrix}
 \usage{
-linear_shrinkage(S, X, lambda = NULL, target = NULL, print = FALSE)
+linear_shrinkage(S, X, lambda = NULL, target = NULL)
 }
 \arguments{
-\item{S}{A symmetric correlation matrix with diagonal elements equal to 1.}
+\item{S}{Symmetric correlation matrix.}
 
-\item{X}{Data matrix (n × p), assumed centered (mean zero by column).}
+\item{X}{Centered data matrix with the same number of columns as `S`.}
 
-\item{lambda}{Shrinkage intensity in [0,1]. If NULL, estimate adaptively.}
+\item{lambda}{Optional shrinkage intensity in `[0, 1]`.}
 
-\item{target}{Target matrix for shrinkage (default: identity).}
-
-\item{print}{Logical; if TRUE, print chosen lambda.}
+\item{target}{Optional shrinkage target. Defaults to the identity matrix.}
 }
 \value{
 A regularized correlation matrix after shrinkage.
 }
 \description{
-Apply linear shrinkage to a correlation matrix.
-If lambda is not provided, estimate it adaptively from data (Ledoit–Wolf).
+Shrink a sample correlation matrix toward a target matrix. If `lambda` is not
+supplied, a Ledoit-Wolf-style plug-in value is estimated from the centered
+data matrix `X`.
 }

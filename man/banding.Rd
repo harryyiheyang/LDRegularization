@@ -2,26 +2,29 @@
 % Please edit documentation in R/banding.R
 \name{banding}
 \alias{banding}
-\title{Banding Regularization for LD Matrix}
+\title{Banding regularization with FSPD positive-definite modification}
 \usage{
-banding(A, k_vec = seq(2, 10), eigenmin = 0.01, print = FALSE)
+banding(A, n = NULL, K = NULL, alpha = 1, eigenmin = 0.001)
 }
 \arguments{
-\item{A}{A symmetric matrix (e.g., LD matrix).}
+\item{A}{Symmetric covariance or correlation matrix.}
 
-\item{k_vec}{A vector of candidate banding bandwidths (default: 2:10).}
+\item{n}{Sample size used to form `A`. Required when `K` is not supplied.}
 
-\item{eigenmin}{Minimum eigenvalue threshold (default: 0.01).}
+\item{K}{Optional bandwidth. If supplied, it overrides the theoretical
+default.}
 
-\item{print}{Logical; if TRUE, prints the chosen k and the minimum eigenvalue.}
+\item{alpha}{Bandable covariance smoothness parameter used in the theoretical
+bandwidth. Default is 1.}
+
+\item{eigenmin}{Minimum eigenvalue target for FSPD. Default is 0.001.}
 }
 \value{
-The regularized matrix after banding.
+A positive-definite banded covariance matrix.
 }
 \description{
-Apply banding regularization to a symmetric matrix.
-For a given bandwidth parameter k, entries within |i-j| <= k are kept and
-entries with |i-j| > k are set to 0. The function searches over a sequence
-of k values (k_vec) and chooses the smallest k for which the minimum eigenvalue
-of the regularized matrix is at least eigenmin.
+Keep entries with `|i - j| <= K` and set all other off-band entries to zero.
+If `K` is not supplied, the default bandwidth is capped at `floor(p / 2)`.
+Positive definiteness is enforced afterward by fixed-support linear
+shrinkage.
 }

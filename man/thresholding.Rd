@@ -2,30 +2,26 @@
 % Please edit documentation in R/thresholding.R
 \name{thresholding}
 \alias{thresholding}
-\title{Entrywise MCP thresholding on correlation; PSD check & return covariance}
+\title{Entrywise MCP thresholding with FSPD positive-definite modification}
 \usage{
-thresholding(
-  S,
-  lam_vec = seq(0.01, 0.1, by = 0.01),
-  eigenmin = 0.01,
-  print = FALSE,
-  mcp_a = 3
-)
+thresholding(S, n = NULL, lambda = NULL, eigenmin = 0.001)
 }
 \arguments{
-\item{S}{Symmetric matrix; covariance or correlation (diag>=0).}
+\item{S}{Symmetric covariance or correlation matrix.}
 
-\item{lam_vec}{Candidate lambdas (increasing), e.g. seq(0.01, 0.10, 0.01)}
+\item{n}{Sample size used to form `S`. Required when `lambda` is not supplied.}
 
-\item{eigenmin}{Minimum eigenvalue target on covariance scale (default 0.01)}
+\item{lambda}{Optional scalar or matrix threshold. If supplied, it overrides
+the theoretical default.}
 
-\item{print}{Whether to print chosen lambda}
-
-\item{mcp_a}{MCP 'a' parameter (default 3)}
+\item{eigenmin}{Minimum eigenvalue target for FSPD. Default is 0.001.}
 }
 \value{
-Regularized covariance matrix (PSD up to eigenmin)
+A positive-definite thresholded covariance matrix.
 }
 \description{
-Entrywise MCP thresholding on correlation; PSD check & return covariance
+Threshold the off-diagonal entries of the correlation version of a covariance
+matrix and map the result back to covariance scale. By default the threshold
+is the high-dimensional rate `2 * sqrt(log(p) / n)`. Positive definiteness
+is enforced afterward by fixed-support linear shrinkage.
 }

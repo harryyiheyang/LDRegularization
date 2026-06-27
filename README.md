@@ -20,13 +20,36 @@ The package currently includes the following main functions:
 
 - poet_banding: POET estimator with banding (keep entries within a fixed bandwidth).
 
-- poet_tapering: POET estimator with tapering (apply a tapering kernel depending on |i−j|).
+- poet_tapering: POET estimator with tapering (apply a tapering kernel depending on |i-j|).
 
 - poet_linear_shrinkage: POET estimator with linear shrinkage of the idiosyncratic covariance.
 
 - thresholding: Standalone entrywise MCP thresholding for covariance/correlation matrices.
 
-All functions automatically select the number of latent factors via ratio-type criteria and search over candidate regularization parameters (e.g., thresholding levels, banding widths, tapering bandwidths) to ensure the resulting covariance matrix is positive semi-definite.
+- banding: Standalone banding with bandwidth `K`.
+
+- tapering: Standalone tapering with bandwidth `K`.
+
+- linear_shrinkage: Standalone linear shrinkage.
+
+- covariance_tl: Covariance transfer learning helper with covariance or
+  projection source transfer.
+
+- select_tl_alpha: 5-fold cross-validation helper for choosing the transfer
+  strength `tl_alpha`.
+
+The POET functions automatically select the number of latent factors via the ratio-type criterion. Sparse methods use theory-rate defaults only when the user does not supply the tuning parameter. Standalone thresholding uses `lambda = 2 * sqrt(log(p) / n)`, while POET thresholding uses `lambda = 2 * max(sqrt(log(p) / n), 1 / sqrt(p))`. Banding and tapering use `K = ceiling(n^(1 / (2 * alpha + 1)))` with `alpha = 1` by default, capped at `floor(p / 2)`. These defaults require `n`; otherwise pass `lambda` or `K` directly. POET linear shrinkage uses `alpha = 0.5` by default and allows direct tuning through `alpha`.
+
+Sparse estimators are made positive definite with fixed-support positive-definite (FSPD) linear shrinkage, using `eigenmin = 0.001` by default. FSPD is a final safeguard and does not choose the sparsity tuning parameter.
+
+Covariance transfer learning uses target correlation `S` and source
+information only to guide the factor space. With `strategy = "covariance"`, the
+factor space is estimated from `S + tl_alpha * source`. With
+`strategy = "projection"`, the source enters through a trace-normalized source
+basis/projector. The residual component is then regularized by one existing
+method: thresholding, banding, tapering, or linear shrinkage. `select_tl_alpha`
+chooses `tl_alpha` from a small grid using target individual-level data
+`X_target` and off-diagonal Frobenius loss on held-out target correlations.
 
 ## Dependencies
 

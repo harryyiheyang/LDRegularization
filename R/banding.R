@@ -1,56 +1,34 @@
-#' Banding Regularization for LD Matrix
+#' Banding regularization with FSPD positive-definite modification
 #'
-#' Apply banding regularization to a symmetric matrix.
-#' For a given bandwidth parameter k, entries within |i-j| <= k are kept and
-#' entries with |i-j| > k are set to 0. The function searches over a sequence
-#' of k values (k_vec) and chooses the smallest k for which the minimum eigenvalue
-#' of the regularized matrix is at least eigenmin.
+#' Keep entries with `|i - j| <= K` and set all other off-band entries to zero.
+#' If `K` is not supplied, the default bandwidth is capped at `floor(p / 2)`.
+#' Positive definiteness is enforced afterward by fixed-support linear
+#' shrinkage.
 #'
-#' @param A A symmetric matrix (e.g., LD matrix).
-#' @param k_vec A vector of candidate banding bandwidths (default: 2:10).
-#' @param eigenmin Minimum eigenvalue threshold (default: 0.01).
-#' @param print Logical; if TRUE, prints the chosen k and the minimum eigenvalue.
-#' @importFrom CppMatrix matrixEigen
-#' @return The regularized matrix after banding.
+#' @param A Symmetric covariance or correlation matrix.
+#' @param n Sample size used to form `A`. Required when `K` is not supplied.
+#' @param K Optional bandwidth. If supplied, it overrides the theoretical
+#'   default.
+#' @param alpha Bandable covariance smoothness parameter used in the theoretical
+#'   bandwidth. Default is 1.
+#' @param eigenmin Minimum eigenvalue target for FSPD. Default is 0.001.
+#'
+#' @return A positive-definite banded covariance matrix.
 #' @export
-banding <- function(A, k_vec = seq(2, 10), eigenmin = 0.01, print = FALSE) {
-stopifnot(is.matrix(A), nrow(A) == ncol(A))
-p <- nrow(A)
+banding <- function(
+    A,
+    n = NULL,
+    K = NULL,
+    alpha = 1,
+    eigenmin = 1e-3
+) {
+  A <- .ld_as_square_matrix(A, "A")
+  p <- nrow(A)
+  A <- .ld_symmetrize(A)
 
-make_weight <- function(k, p) {
-d <- 0:(p - 1)
-w <- as.numeric(d <= k)
-toeplitz(w)
-}
+  K <- .ld_resolve_bandwidth(p, n, K, alpha)
+  W <- .ld_band_weight(p, K)
+  Areg <- .ld_symmetrize(A * W)
 
-for (k in k_vec) {
-W <- make_weight(k, p)
-Areg <- A * W
-Areg <- (Areg + t(Areg)) / 2
-
-lam_min <- tryCatch(
-matrixEigen(Areg)$values[p],
-error = function(e) NA_real_
-)
-
-if (!is.na(lam_min) && lam_min >= eigenmin) {
-if (print) {
-print(paste("Selected k =", k, "with min eigenvalue =", round(lam_min, 6)))
-}
-return(Areg)
-}
-}
-
-k_last <- tail(k_vec, 1L)
-W <- make_weight(k_last, p)
-Areg <- A * W
-Areg <- (Areg + t(Areg)) / 2
-lam_min <- tryCatch(
-matrixEigen(Areg)$values[p],
-error = function(e) NA_real_
-)
-if (print) {
-print(paste("No k met eigenmin; using k =", k_last,"with min eigenvalue =", round(lam_min, 6)))
-}
-return(Areg)
+  .ld_fspd(Areg, eigenmin = eigenmin)
 }

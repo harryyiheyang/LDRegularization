@@ -2,45 +2,27 @@
 % Please edit documentation in R/poet_banding.R
 \name{poet_banding}
 \alias{poet_banding}
-\title{poet_banding: POET with banding on the idiosyncratic covariance}
+\title{POET with banding and FSPD positive-definite modification}
 \usage{
-poet_banding(
-  S,
-  n,
-  cutoff_method = "D.ratio",
-  k_min = 5,
-  k_max = min(15, round(nrow(S)/2)),
-  banding_vec = seq(2, 20, 2),
-  eigenmin = 0.001
-)
+poet_banding(S, n, K = NULL, alpha = 1, eigenmin = 0.001)
 }
 \arguments{
-\item{S}{A symmetric matrix (p×p). It can be a covariance matrix or a
-correlation matrix.}
+\item{S}{Symmetric covariance or correlation matrix.}
 
-\item{n}{The sample size that produced `S`.}
+\item{n}{Sample size used to form `S`.}
 
-\item{cutoff_method}{Character string specifying how to choose the number of
-factors `m`. One of `"D.ratio"` or `"ratio"` (default: `"D.ratio"`).}
+\item{K}{Optional bandwidth. Overrides the theoretical default.}
 
-\item{k_min, k_max}{Integers giving the search range for the number of
-factors `m`. Defaults are `k_min = 5` and
-`k_max = min(15, floor(nrow(S) / 2))`.}
+\item{alpha}{Bandable covariance smoothness parameter used in the theoretical
+bandwidth. Default is 1.}
 
-\item{banding_vec}{Integer vector of candidate bandwidths for hard
-banding of the idiosyncratic covariance (i.e., keep entries with
-|i − j| ≤ b and set others to 0). Default: `seq(2, 20, 2)`.
-Use `0` to keep only the diagonal (purely diagonal idiosyncratic part).}
-
-\item{eigenmin}{The threshold for the minimum eigenvalues used in determining the optimal shrinkage parameter. Default is `1e-3`.}
+\item{eigenmin}{Minimum eigenvalue target for FSPD. Default is 0.001.}
 }
 \value{
-A covariance matrix (p×p) regularized by POET + banding; symmetric
-  and positive semi-definite up to `eigenmin`.
+A positive-definite POET regularized correlation matrix.
 }
 \description{
-Apply the POET framework where the factor component is estimated from the
-leading eigenpairs and the idiosyncratic component is banded (hard banding)
-with a candidate bandwidth chosen from `banding_vec`. The number of latent
-factors is selected using a ratio-type rule.
+Estimate a factor component from the leading eigenpairs of `S`, band the
+idiosyncratic covariance, and apply FSPD linear shrinkage to the sparse
+idiosyncratic estimator.
 }
