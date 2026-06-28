@@ -6,6 +6,8 @@
 #' definiteness is enforced afterward by fixed-support linear shrinkage.
 #'
 #' @param A Symmetric covariance or correlation matrix.
+#' @param X Optional individual-level data matrix. Used to compute `A` when
+#'   `A` is not supplied and to infer `n` for the default bandwidth.
 #' @param n Sample size used to form `A`. Required when `K` is not supplied.
 #' @param K Optional bandwidth. If supplied, it overrides the theoretical
 #'   default.
@@ -16,13 +18,16 @@
 #' @return A positive-definite tapered covariance matrix.
 #' @export
 tapering <- function(
-    A,
+    A = NULL,
     n = NULL,
     K = NULL,
     alpha = 1,
-    eigenmin = 1e-3
+    eigenmin = 1e-3,
+    X = NULL
 ) {
-  A <- .ld_as_square_matrix(A, "A")
+  input <- .ld_resolve_input(S = A, X = X, n = n, name = "A")
+  A <- input$S
+  n <- input$n
   p <- nrow(A)
   A <- .ld_symmetrize(A)
 

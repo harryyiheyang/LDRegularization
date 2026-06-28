@@ -4,8 +4,11 @@
 #' idiosyncratic covariance on correlation scale, and apply FSPD linear
 #' shrinkage to the sparse idiosyncratic estimator.
 #'
-#' @param S Symmetric covariance or correlation matrix.
-#' @param n Sample size used to form `S`.
+#' @param S Optional symmetric covariance or correlation matrix.
+#' @param X Optional individual-level data matrix. Used to compute `S` when
+#'   `S` is not supplied and to infer `n`.
+#' @param n Sample size used to form `S`. Required when `S` is supplied and
+#'   `lambda` is not supplied.
 #' @param lambda Optional scalar threshold. Overrides the theoretical default.
 #'   If missing, `2 * max(sqrt(log(p) / n), 1 / sqrt(p))` is used.
 #' @param eigenmin Minimum eigenvalue target for FSPD. Default is 0.001.
@@ -13,11 +16,15 @@
 #' @return A positive-definite POET regularized correlation matrix.
 #' @export
 poet_thresholding <- function(
-    S,
-    n,
+    S = NULL,
+    n = NULL,
     lambda = NULL,
-    eigenmin = 1e-3
+    eigenmin = 1e-3,
+    X = NULL
 ) {
+  input <- .ld_resolve_input(S = S, X = X, n = n, name = "S")
+  S <- input$S
+  n <- input$n
   n <- .ld_validate_n(n)
   comp <- .ld_poet_components(
     S,

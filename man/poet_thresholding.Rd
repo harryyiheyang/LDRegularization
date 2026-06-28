@@ -4,17 +4,27 @@
 \alias{poet_thresholding}
 \title{POET with MCP thresholding and FSPD positive-definite modification}
 \usage{
-poet_thresholding(S, n, lambda = NULL, eigenmin = 0.001)
+poet_thresholding(
+  S = NULL,
+  n = NULL,
+  lambda = NULL,
+  eigenmin = 0.001,
+  X = NULL
+)
 }
 \arguments{
-\item{S}{Symmetric covariance or correlation matrix.}
+\item{S}{Optional symmetric covariance or correlation matrix.}
 
-\item{n}{Sample size used to form `S`.}
+\item{n}{Sample size used to form `S`. Required when `S` is supplied and
+`lambda` is not supplied.}
 
 \item{lambda}{Optional scalar threshold. Overrides the theoretical default.
 If missing, `2 * max(sqrt(log(p) / n), 1 / sqrt(p))` is used.}
 
 \item{eigenmin}{Minimum eigenvalue target for FSPD. Default is 0.001.}
+
+\item{X}{Optional individual-level data matrix. Used to compute `S` when
+`S` is not supplied and to infer `n`.}
 }
 \value{
 A positive-definite POET regularized correlation matrix.

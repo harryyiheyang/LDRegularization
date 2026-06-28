@@ -6,6 +6,8 @@
 #' is enforced afterward by fixed-support linear shrinkage.
 #'
 #' @param S Symmetric covariance or correlation matrix.
+#' @param X Optional individual-level data matrix. Used to compute `S` when
+#'   `S` is not supplied and to infer `n` for the default threshold.
 #' @param n Sample size used to form `S`. Required when `lambda` is not supplied.
 #' @param lambda Optional scalar or matrix threshold. If supplied, it overrides
 #'   the theoretical default.
@@ -14,12 +16,15 @@
 #' @return A positive-definite thresholded covariance matrix.
 #' @export
 thresholding <- function(
-    S,
+    S = NULL,
     n = NULL,
     lambda = NULL,
-    eigenmin = 1e-3
+    eigenmin = 1e-3,
+    X = NULL
 ) {
-  S <- .ld_as_square_matrix(S, "S")
+  input <- .ld_resolve_input(S = S, X = X, n = n, name = "S")
+  S <- input$S
+  n <- input$n
   p <- nrow(S)
   S <- .ld_symmetrize(S)
 

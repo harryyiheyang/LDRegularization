@@ -6,11 +6,11 @@ Author: Yihe Yang
 Maintainer: Yihe Yang <yxy1234@case.edu>
 Description: This package provides methods for regularizing large-scale 
     linkage disequilibrium (LD) matrix. It implements a variety of 
-    regularization techniques, including shrinkage, banding, tapering, 
-    thresholding, and block thresholding, as well as their POET-based 
-    extensions. The package enables efficient computation for high-dimensional 
-    LD matrix, with selected functions implemented in C++ for performance 
-    (via Rcpp and CppMatrix).
+    regularization techniques, including shrinkage, nonlinear shrinkage,
+    banding, tapering, thresholding, POET-based extensions, and covariance
+    transfer learning helpers. The package enables efficient computation for
+    high-dimensional LD matrix estimation via CppMatrix-backed matrix
+    operations where possible.
 License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true

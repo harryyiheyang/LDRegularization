@@ -4,12 +4,20 @@
 \alias{poet_banding}
 \title{POET with banding and FSPD positive-definite modification}
 \usage{
-poet_banding(S, n, K = NULL, alpha = 1, eigenmin = 0.001)
+poet_banding(
+  S = NULL,
+  n = NULL,
+  K = NULL,
+  alpha = 1,
+  eigenmin = 0.001,
+  X = NULL
+)
 }
 \arguments{
-\item{S}{Symmetric covariance or correlation matrix.}
+\item{S}{Optional symmetric covariance or correlation matrix.}
 
-\item{n}{Sample size used to form `S`.}
+\item{n}{Sample size used to form `S`. Required when `S` is supplied and
+`K` is not supplied.}
 
 \item{K}{Optional bandwidth. Overrides the theoretical default.}
 
@@ -17,6 +25,9 @@ poet_banding(S, n, K = NULL, alpha = 1, eigenmin = 0.001)
 bandwidth. Default is 1.}
 
 \item{eigenmin}{Minimum eigenvalue target for FSPD. Default is 0.001.}
+
+\item{X}{Optional individual-level data matrix. Used to compute `S` when
+`S` is not supplied and to infer `n`.}
 }
 \value{
 A positive-definite POET regularized correlation matrix.

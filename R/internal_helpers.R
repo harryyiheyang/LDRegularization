@@ -9,6 +9,17 @@
   x
 }
 
+.ld_as_matrix <- function(x, name = "x") {
+  if (!is.matrix(x)) {
+    x <- as.matrix(x)
+  }
+  storage.mode(x) <- "double"
+  if (anyNA(x)) {
+    stop(name, " must not contain missing values.", call. = FALSE)
+  }
+  x
+}
+
 .ld_symmetrize <- function(x) {
   (x + t(x)) / 2
 }
@@ -49,15 +60,41 @@
 }
 
 .ld_matrix_cor <- function(x) {
-  if (!is.matrix(x)) {
-    x <- as.matrix(x)
-  }
-  storage.mode(x) <- "double"
+  x <- .ld_as_matrix(x, "X")
   out <- tryCatch(
     CppMatrix::matrixCor(x),
     error = function(e) stats::cor(x, use = "pairwise.complete.obs")
   )
   .ld_clean_correlation(out, "correlation matrix")
+}
+
+.ld_scale_matrix <- function(x, name = "X") {
+  x <- .ld_as_matrix(x, name)
+  if (nrow(x) < 3L || ncol(x) < 2L) {
+    stop(name, " must have at least 3 rows and 2 columns.", call. = FALSE)
+  }
+  center <- colMeans(x)
+  x <- sweep(x, 2L, center, "-")
+  scale <- sqrt(colSums(x^2) / (nrow(x) - 1L))
+  scale[!is.finite(scale) | scale <= 0] <- 1
+  x <- sweep(x, 2L, scale, "/")
+  list(X = x, n = nrow(x), n_eff = nrow(x) - 1L)
+}
+
+.ld_resolve_input <- function(S = NULL, X = NULL, n = NULL, name = "S") {
+  if (is.null(S) && is.null(X)) {
+    stop("Provide either ", name, " or X.", call. = FALSE)
+  }
+  if (!is.null(S)) {
+    S <- .ld_as_square_matrix(S, name)
+    if (!is.null(X) && is.null(n)) {
+      X <- .ld_as_matrix(X, "X")
+      n <- nrow(X)
+    }
+    return(list(S = S, X = X, n = n))
+  }
+  X <- .ld_as_matrix(X, "X")
+  list(S = .ld_matrix_cor(X), X = X, n = nrow(X))
 }
 
 .ld_validate_n <- function(n) {
@@ -317,7 +354,7 @@
   P <- .ld_symmetrize(P)
   E <- .ld_fix_residual_diag(S - P)
 
-  list(S = S, P = P, E = E, factors = pck, eigenvalues = d)
+  list(S = S, P = P, E = E, U = Uk, factors = pck, eigenvalues = d)
 }
 
 .ld_match_tl_strategy <- function(strategy) {
@@ -374,6 +411,38 @@
   list(type = "projection", value = U, rank = ncol(U))
 }
 
+.ld_resolve_tl_source_input <- function(
+    source = NULL,
+    R_source = NULL,
+    X_source = NULL,
+    P_source = NULL,
+    strategy,
+    p,
+    source_rank = NULL
+) {
+  if (is.null(source)) {
+    if (identical(strategy, "covariance")) {
+      if (!is.null(R_source)) {
+        source <- R_source
+      } else if (!is.null(X_source)) {
+        source <- .ld_matrix_cor(X_source)
+      }
+    } else {
+      if (!is.null(P_source)) {
+        source <- P_source
+      } else if (!is.null(R_source)) {
+        source <- R_source
+      } else if (!is.null(X_source)) {
+        source <- .ld_matrix_cor(X_source)
+      }
+    }
+  }
+  if (is.null(source)) {
+    stop("Provide source, R_source, X_source, or P_source.", call. = FALSE)
+  }
+  .ld_prepare_tl_source(source, p, strategy, source_rank)
+}
+
 .ld_tl_mix_matrix <- function(S, source_info, strategy, tl_alpha) {
   if (length(tl_alpha) != 1L || !is.finite(tl_alpha) || tl_alpha < 0) {
     stop("tl_alpha must be a nonnegative finite scalar.", call. = FALSE)
@@ -421,15 +490,21 @@
 
 .ld_regularize_tl_residual <- function(
     E,
+    X,
+    U,
     n,
     method,
     lambda,
     K,
     alpha,
     shrink_alpha,
+    nonlinear_shrinkage,
     eigenmin
 ) {
-  method <- match.arg(method, c("thresholding", "banding", "tapering", "linear_shrinkage"))
+  method <- match.arg(
+    method,
+    c("thresholding", "banding", "tapering", "linear_shrinkage", "nonlinear_shrinkage")
+  )
   if (identical(method, "thresholding")) {
     lambda <- .ld_resolve_poet_threshold(nrow(E), n, lambda)
     return(thresholding(E, lambda = lambda, eigenmin = eigenmin))
@@ -439,6 +514,17 @@
   }
   if (identical(method, "tapering")) {
     return(tapering(E, n = n, K = K, alpha = alpha, eigenmin = eigenmin))
+  }
+  if (identical(method, "nonlinear_shrinkage")) {
+    if (is.null(X)) {
+      stop("method = 'nonlinear_shrinkage' requires individual-level X.", call. = FALSE)
+    }
+    return(.ld_nonlinear_residual(
+      X,
+      U,
+      shrinkage = nonlinear_shrinkage,
+      eigenmin = eigenmin
+    ))
   }
 
   D <- diag(diag(E), nrow(E), ncol(E))
@@ -452,6 +538,7 @@
 
 .ld_fit_covariance_tl_prepared <- function(
     S,
+    X = NULL,
     n,
     source_info,
     strategy,
@@ -461,18 +548,22 @@
     K,
     alpha,
     shrink_alpha,
+    nonlinear_shrinkage,
     eigenmin
 ) {
   n <- .ld_validate_n(n)
   comp <- .ld_covariance_tl_components(S, source_info, strategy, tl_alpha)
   E_reg <- .ld_regularize_tl_residual(
     comp$E,
+    X = X,
+    U = comp$U,
     n = n,
     method = method,
     lambda = lambda,
     K = K,
     alpha = alpha,
     shrink_alpha = shrink_alpha,
+    nonlinear_shrinkage = nonlinear_shrinkage,
     eigenmin = eigenmin
   )
   stats::cov2cor(.ld_symmetrize(comp$P + E_reg))

@@ -5,29 +5,47 @@
 \title{Covariance transfer learning regularization}
 \usage{
 covariance_tl(
-  S,
-  source,
-  n,
+  S = NULL,
+  source = NULL,
+  n = NULL,
+  X = NULL,
+  R_source = NULL,
+  X_source = NULL,
+  P_source = NULL,
   strategy = c("covariance", "projection", "P"),
-  method = c("thresholding", "banding", "tapering", "linear_shrinkage"),
+  method = c("thresholding", "banding", "tapering", "linear_shrinkage",
+    "nonlinear_shrinkage"),
   tl_alpha = 0.5,
   lambda = NULL,
   K = NULL,
   alpha = 1,
   shrink_alpha = 0.5,
+  nonlinear_shrinkage = 0,
   eigenmin = 0.001,
   source_rank = NULL
 )
 }
 \arguments{
-\item{S}{Target covariance or correlation matrix.}
+\item{S}{Optional target covariance or correlation matrix.}
 
-\item{source}{Source information. For `strategy = "covariance"`, this must
+\item{source}{Optional source information. For `strategy = "covariance"`, this must
 be a covariance or correlation matrix. For `strategy = "projection"`, this
 can be a source basis matrix with `p` rows, a source projector, or a source
 covariance matrix from which a basis is extracted.}
 
 \item{n}{Target sample size used to form `S`.}
+
+\item{X}{Optional target individual-level data matrix. Used to compute `S`
+when `S` is not supplied and required for
+`method = "nonlinear_shrinkage"`.}
+
+\item{R_source}{Optional source covariance or correlation matrix.}
+
+\item{X_source}{Optional source individual-level data. If `source` and
+`R_source` are omitted, `R_source = matrixCor(X_source)` is used.}
+
+\item{P_source}{Optional source basis or projection matrix for
+`strategy = "projection"`.}
 
 \item{strategy}{Source transfer strategy: `"covariance"` or `"projection"`.
 `"P"` is accepted as an alias for `"projection"`.}
@@ -44,6 +62,9 @@ covariance matrix from which a basis is extracted.}
 
 \item{shrink_alpha}{Shrinkage intensity used only for
 `method = "linear_shrinkage"`.}
+
+\item{nonlinear_shrinkage}{Mixing weight used only for
+`method = "nonlinear_shrinkage"`. Default is 0.}
 
 \item{eigenmin}{Minimum eigenvalue target for FSPD. Default is 0.001.}
 

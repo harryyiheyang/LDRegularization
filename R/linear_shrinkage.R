@@ -1,25 +1,29 @@
-#' Adaptive linear shrinkage for a correlation matrix
+#' Linear shrinkage for a correlation matrix
 #'
-#' Shrink a sample correlation matrix toward a target matrix. If `lambda` is not
-#' supplied, a Ledoit-Wolf-style plug-in value is estimated from the centered
-#' data matrix `X`.
+#' Shrink a sample correlation matrix toward a target matrix. The default
+#' shrinkage intensity is intentionally small and tuning-free.
 #'
-#' @param S Symmetric correlation matrix.
-#' @param X Centered data matrix with the same number of columns as `S`.
-#' @param lambda Optional shrinkage intensity in `[0, 1]`.
+#' @param S Optional symmetric correlation matrix.
+#' @param X Optional individual-level data matrix. Used to compute `S` when
+#'   `S` is not supplied.
+#' @param alpha Shrinkage intensity in `[0, 1]`. Default is 0.05.
 #' @param target Optional shrinkage target. Defaults to the identity matrix.
+#' @param eigenmin Minimum eigenvalue target for FSPD. Default is 0.001.
+#' @param lambda Deprecated alias for `alpha`, kept for backward
+#'   compatibility.
 #'
 #' @return A regularized correlation matrix after shrinkage.
 #' @export
-linear_shrinkage <- function(S, X, lambda = NULL, target = NULL) {
-  S <- .ld_as_square_matrix(S, "S")
-  if (!is.matrix(X)) {
-    X <- as.matrix(X)
-  }
-  if (ncol(X) != ncol(S)) {
-    stop("X must have the same number of columns as S.", call. = FALSE)
-  }
-
+linear_shrinkage <- function(
+    S = NULL,
+    X = NULL,
+    alpha = 0.05,
+    target = NULL,
+    eigenmin = 1e-3,
+    lambda = NULL
+) {
+  input <- .ld_resolve_input(S = S, X = X, name = "S")
+  S <- input$S
   p <- ncol(S)
   if (is.null(target)) {
     target <- diag(1, p)
@@ -33,14 +37,19 @@ linear_shrinkage <- function(S, X, lambda = NULL, target = NULL) {
   S <- .ld_symmetrize(S)
   target <- .ld_symmetrize(target)
 
-  if (is.null(lambda)) {
-    row_norm4 <- rowSums(X^2)^2
-    pi_hat <- mean(row_norm4) - sum(S^2)
-    d2_hat <- sum((S - target)^2)
-    lambda <- if (d2_hat > 0) pi_hat / d2_hat else 1
+  if (!is.null(lambda)) {
+    alpha <- lambda
   }
+  if (length(alpha) != 1L || !is.finite(alpha)) {
+    stop("alpha must be a finite scalar.", call. = FALSE)
+  }
+  alpha <- min(max(alpha[1L], 0), 1)
 
-  lambda <- min(max(lambda[1L], 0), 1)
-
-  .ld_symmetrize(lambda * target + (1 - lambda) * S)
+  out <- .ld_symmetrize(alpha * target + (1 - alpha) * S)
+  out <- .ld_fspd(out, eigenmin = eigenmin)
+  out <- stats::cov2cor(out)
+  out[is.na(out)] <- 0
+  out <- .ld_symmetrize(out)
+  diag(out) <- 1
+  out
 }

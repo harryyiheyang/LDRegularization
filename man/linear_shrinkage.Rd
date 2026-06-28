@@ -2,24 +2,36 @@
 % Please edit documentation in R/linear_shrinkage.R
 \name{linear_shrinkage}
 \alias{linear_shrinkage}
-\title{Adaptive linear shrinkage for a correlation matrix}
+\title{Linear shrinkage for a correlation matrix}
 \usage{
-linear_shrinkage(S, X, lambda = NULL, target = NULL)
+linear_shrinkage(
+  S = NULL,
+  X = NULL,
+  alpha = 0.05,
+  target = NULL,
+  eigenmin = 0.001,
+  lambda = NULL
+)
 }
 \arguments{
-\item{S}{Symmetric correlation matrix.}
+\item{S}{Optional symmetric correlation matrix.}
 
-\item{X}{Centered data matrix with the same number of columns as `S`.}
+\item{X}{Optional individual-level data matrix. Used to compute `S` when
+`S` is not supplied.}
 
-\item{lambda}{Optional shrinkage intensity in `[0, 1]`.}
+\item{alpha}{Shrinkage intensity in `[0, 1]`. Default is 0.05.}
 
 \item{target}{Optional shrinkage target. Defaults to the identity matrix.}
+
+\item{eigenmin}{Minimum eigenvalue target for FSPD. Default is 0.001.}
+
+\item{lambda}{Deprecated alias for `alpha`, kept for backward
+compatibility.}
 }
 \value{
 A regularized correlation matrix after shrinkage.
 }
 \description{
-Shrink a sample correlation matrix toward a target matrix. If `lambda` is not
-supplied, a Ledoit-Wolf-style plug-in value is estimated from the centered
-data matrix `X`.
+Shrink a sample correlation matrix toward a target matrix. The default
+shrinkage intensity is intentionally small and tuning-free.
 }

@@ -4,10 +4,16 @@
 \alias{poet_linear_shrinkage}
 \title{POET with linear shrinkage of the idiosyncratic covariance}
 \usage{
-poet_linear_shrinkage(S, n, alpha = 0.5, eigenmin = 0.001)
+poet_linear_shrinkage(
+  S = NULL,
+  n = NULL,
+  alpha = 0.5,
+  eigenmin = 0.001,
+  X = NULL
+)
 }
 \arguments{
-\item{S}{Symmetric covariance or correlation matrix.}
+\item{S}{Optional symmetric covariance or correlation matrix.}
 
 \item{n}{Sample size used to form `S`.}
 
@@ -15,6 +21,9 @@ poet_linear_shrinkage(S, n, alpha = 0.5, eigenmin = 0.001)
 idiosyncratic covariance. Default is 0.5.}
 
 \item{eigenmin}{Minimum eigenvalue target for the idiosyncratic component.}
+
+\item{X}{Optional individual-level data matrix. Used to compute `S` when
+`S` is not supplied and to infer `n`.}
 }
 \value{
 A positive-definite POET regularized correlation matrix.

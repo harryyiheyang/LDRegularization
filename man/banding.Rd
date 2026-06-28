@@ -4,7 +4,7 @@
 \alias{banding}
 \title{Banding regularization with FSPD positive-definite modification}
 \usage{
-banding(A, n = NULL, K = NULL, alpha = 1, eigenmin = 0.001)
+banding(A = NULL, n = NULL, K = NULL, alpha = 1, eigenmin = 0.001, X = NULL)
 }
 \arguments{
 \item{A}{Symmetric covariance or correlation matrix.}
@@ -18,6 +18,9 @@ default.}
 bandwidth. Default is 1.}
 
 \item{eigenmin}{Minimum eigenvalue target for FSPD. Default is 0.001.}
+
+\item{X}{Optional individual-level data matrix. Used to compute `A` when
+`A` is not supplied and to infer `n` for the default bandwidth.}
 }
 \value{
 A positive-definite banded covariance matrix.

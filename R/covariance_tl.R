@@ -3,12 +3,20 @@
 #' Use source covariance information to guide the factor space, then regularize
 #' the target idiosyncratic component with one of the existing sparse methods.
 #'
-#' @param S Target covariance or correlation matrix.
-#' @param source Source information. For `strategy = "covariance"`, this must
+#' @param S Optional target covariance or correlation matrix.
+#' @param source Optional source information. For `strategy = "covariance"`, this must
 #'   be a covariance or correlation matrix. For `strategy = "projection"`, this
 #'   can be a source basis matrix with `p` rows, a source projector, or a source
 #'   covariance matrix from which a basis is extracted.
 #' @param n Target sample size used to form `S`.
+#' @param X Optional target individual-level data matrix. Used to compute `S`
+#'   when `S` is not supplied and required for
+#'   `method = "nonlinear_shrinkage"`.
+#' @param R_source Optional source covariance or correlation matrix.
+#' @param X_source Optional source individual-level data. If `source` and
+#'   `R_source` are omitted, `R_source = matrixCor(X_source)` is used.
+#' @param P_source Optional source basis or projection matrix for
+#'   `strategy = "projection"`.
 #' @param strategy Source transfer strategy: `"covariance"` or `"projection"`.
 #'   `"P"` is accepted as an alias for `"projection"`.
 #' @param method Residual regularization method.
@@ -18,6 +26,8 @@
 #' @param alpha Smoothness parameter used only for default `K`.
 #' @param shrink_alpha Shrinkage intensity used only for
 #'   `method = "linear_shrinkage"`.
+#' @param nonlinear_shrinkage Mixing weight used only for
+#'   `method = "nonlinear_shrinkage"`. Default is 0.
 #' @param eigenmin Minimum eigenvalue target for FSPD. Default is 0.001.
 #' @param source_rank Optional rank used when `strategy = "projection"` and
 #'   `source` is a square covariance matrix.
@@ -26,27 +36,48 @@
 #'   matrix.
 #' @export
 covariance_tl <- function(
-    S,
-    source,
-    n,
+    S = NULL,
+    source = NULL,
+    n = NULL,
+    X = NULL,
+    R_source = NULL,
+    X_source = NULL,
+    P_source = NULL,
     strategy = c("covariance", "projection", "P"),
-    method = c("thresholding", "banding", "tapering", "linear_shrinkage"),
+    method = c(
+      "thresholding",
+      "banding",
+      "tapering",
+      "linear_shrinkage",
+      "nonlinear_shrinkage"
+    ),
     tl_alpha = 0.5,
     lambda = NULL,
     K = NULL,
     alpha = 1,
     shrink_alpha = 0.5,
+    nonlinear_shrinkage = 0,
     eigenmin = 1e-3,
     source_rank = NULL
 ) {
   strategy <- .ld_match_tl_strategy(strategy)
   method <- match.arg(method)
-  S <- .ld_clean_correlation(S, "S")
-  source_info <- .ld_prepare_tl_source(source, nrow(S), strategy, source_rank)
+  input <- .ld_resolve_input(S = S, X = X, n = n, name = "S")
+  S <- .ld_clean_correlation(input$S, "S")
+  source_info <- .ld_resolve_tl_source_input(
+    source = source,
+    R_source = R_source,
+    X_source = X_source,
+    P_source = P_source,
+    strategy = strategy,
+    p = nrow(S),
+    source_rank = source_rank
+  )
 
   .ld_fit_covariance_tl_prepared(
     S = S,
-    n = n,
+    X = input$X,
+    n = input$n,
     source_info = source_info,
     strategy = strategy,
     tl_alpha = tl_alpha,
@@ -55,6 +86,7 @@ covariance_tl <- function(
     K = K,
     alpha = alpha,
     shrink_alpha = shrink_alpha,
+    nonlinear_shrinkage = nonlinear_shrinkage,
     eigenmin = eigenmin
   )
 }
@@ -66,6 +98,11 @@ covariance_tl <- function(
 #'
 #' @param X_target Target individual-level data matrix with observations in rows.
 #' @param source Source information passed to `covariance_tl()`.
+#' @param R_source Optional source covariance or correlation matrix.
+#' @param X_source Optional source individual-level data. If `source` and
+#'   `R_source` are omitted, `R_source = matrixCor(X_source)` is used.
+#' @param P_source Optional source basis or projection matrix for
+#'   `strategy = "projection"`.
 #' @param strategy Source transfer strategy: `"covariance"` or `"projection"`.
 #'   `"P"` is accepted as an alias for `"projection"`.
 #' @param method Residual regularization method.
@@ -77,6 +114,8 @@ covariance_tl <- function(
 #' @param alpha Smoothness parameter used only for default `K`.
 #' @param shrink_alpha Shrinkage intensity used only for
 #'   `method = "linear_shrinkage"`.
+#' @param nonlinear_shrinkage Mixing weight used only for
+#'   `method = "nonlinear_shrinkage"`. Default is 0.
 #' @param eigenmin Minimum eigenvalue target for FSPD. Default is 0.001.
 #' @param source_rank Optional rank used when `strategy = "projection"` and
 #'   `source` is a square covariance matrix.
@@ -86,15 +125,25 @@ covariance_tl <- function(
 #' @export
 select_tl_alpha <- function(
     X_target,
-    source,
+    source = NULL,
+    R_source = NULL,
+    X_source = NULL,
+    P_source = NULL,
     strategy = c("covariance", "projection", "P"),
-    method = c("thresholding", "banding", "tapering", "linear_shrinkage"),
+    method = c(
+      "thresholding",
+      "banding",
+      "tapering",
+      "linear_shrinkage",
+      "nonlinear_shrinkage"
+    ),
     tl_alpha_grid = c(0, 0.05, 0.1, 0.25, 0.5, 1, 2),
     folds = 5,
     lambda = NULL,
     K = NULL,
     alpha = 1,
     shrink_alpha = 0.5,
+    nonlinear_shrinkage = 0,
     eigenmin = 1e-3,
     source_rank = NULL
 ) {
@@ -123,7 +172,15 @@ select_tl_alpha <- function(
 
   strategy <- .ld_match_tl_strategy(strategy)
   method <- match.arg(method)
-  source_info <- .ld_prepare_tl_source(source, p, strategy, source_rank)
+  source_info <- .ld_resolve_tl_source_input(
+    source = source,
+    R_source = R_source,
+    X_source = X_source,
+    P_source = P_source,
+    strategy = strategy,
+    p = p,
+    source_rank = source_rank
+  )
 
   fold_id <- sample(rep(seq_len(folds), length.out = n_total))
   fold_scores <- matrix(
@@ -145,6 +202,7 @@ select_tl_alpha <- function(
     for (j in seq_along(tl_alpha_grid)) {
       estimate <- .ld_fit_covariance_tl_prepared(
         S = R_train,
+        X = X_target[train_idx, , drop = FALSE],
         n = length(train_idx),
         source_info = source_info,
         strategy = strategy,
@@ -154,6 +212,7 @@ select_tl_alpha <- function(
         K = K,
         alpha = alpha,
         shrink_alpha = shrink_alpha,
+        nonlinear_shrinkage = nonlinear_shrinkage,
         eigenmin = eigenmin
       )
       fold_scores[fold, j] <- .ld_offdiag_frobenius_loss(estimate, R_val)

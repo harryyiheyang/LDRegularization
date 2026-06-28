@@ -3,7 +3,9 @@
 #' Estimate a factor component from the leading eigenpairs of `S` and shrink the
 #' idiosyncratic covariance toward its diagonal.
 #'
-#' @param S Symmetric covariance or correlation matrix.
+#' @param S Optional symmetric covariance or correlation matrix.
+#' @param X Optional individual-level data matrix. Used to compute `S` when
+#'   `S` is not supplied and to infer `n`.
 #' @param n Sample size used to form `S`.
 #' @param alpha Shrinkage intensity in `[0, 1]` toward the diagonal of the
 #'   idiosyncratic covariance. Default is 0.5.
@@ -12,11 +14,15 @@
 #' @return A positive-definite POET regularized correlation matrix.
 #' @export
 poet_linear_shrinkage <- function(
-    S,
-    n,
+    S = NULL,
+    n = NULL,
     alpha = 0.5,
-    eigenmin = 1e-3
+    eigenmin = 1e-3,
+    X = NULL
 ) {
+  input <- .ld_resolve_input(S = S, X = X, n = n, name = "S")
+  S <- input$S
+  n <- input$n
   n <- .ld_validate_n(n)
   comp <- .ld_poet_components(
     S,

@@ -6,15 +6,20 @@
 \usage{
 select_tl_alpha(
   X_target,
-  source,
+  source = NULL,
+  R_source = NULL,
+  X_source = NULL,
+  P_source = NULL,
   strategy = c("covariance", "projection", "P"),
-  method = c("thresholding", "banding", "tapering", "linear_shrinkage"),
+  method = c("thresholding", "banding", "tapering", "linear_shrinkage",
+    "nonlinear_shrinkage"),
   tl_alpha_grid = c(0, 0.05, 0.1, 0.25, 0.5, 1, 2),
   folds = 5,
   lambda = NULL,
   K = NULL,
   alpha = 1,
   shrink_alpha = 0.5,
+  nonlinear_shrinkage = 0,
   eigenmin = 0.001,
   source_rank = NULL
 )
@@ -23,6 +28,14 @@ select_tl_alpha(
 \item{X_target}{Target individual-level data matrix with observations in rows.}
 
 \item{source}{Source information passed to `covariance_tl()`.}
+
+\item{R_source}{Optional source covariance or correlation matrix.}
+
+\item{X_source}{Optional source individual-level data. If `source` and
+`R_source` are omitted, `R_source = matrixCor(X_source)` is used.}
+
+\item{P_source}{Optional source basis or projection matrix for
+`strategy = "projection"`.}
 
 \item{strategy}{Source transfer strategy: `"covariance"` or `"projection"`.
 `"P"` is accepted as an alias for `"projection"`.}
@@ -42,6 +55,9 @@ automatically if not supplied.}
 
 \item{shrink_alpha}{Shrinkage intensity used only for
 `method = "linear_shrinkage"`.}
+
+\item{nonlinear_shrinkage}{Mixing weight used only for
+`method = "nonlinear_shrinkage"`. Default is 0.}
 
 \item{eigenmin}{Minimum eigenvalue target for FSPD. Default is 0.001.}
 
