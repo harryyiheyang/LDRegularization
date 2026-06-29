@@ -13,6 +13,8 @@
 #'   Default is 0, which keeps the sample residual and only applies the
 #'   positive-definite safeguard.
 #' @param eigenmin Minimum eigenvalue target. Default is 0.001.
+#' @param scale If `TRUE`, center and standardize `X` before estimation.
+#'   Default is `FALSE`, assuming `X` has already been scaled.
 #'
 #' @return A positive-definite POET regularized correlation matrix.
 #' @export
@@ -21,12 +23,13 @@ poet_nonlinear_shrinkage <- function(
     S = NULL,
     n = NULL,
     shrinkage = 0,
-    eigenmin = 1e-3
+    eigenmin = 1e-3,
+    scale = FALSE
 ) {
   if (missing(X) || is.null(X)) {
     stop("poet_nonlinear_shrinkage requires individual-level X.", call. = FALSE)
   }
-  input <- .ld_resolve_input(S = S, X = X, n = n, name = "S")
+  input <- .ld_resolve_input(S = S, X = X, n = n, name = "S", scale = scale)
   n <- .ld_validate_n(input$n)
   comp <- .ld_poet_components(
     input$S,
@@ -40,7 +43,8 @@ poet_nonlinear_shrinkage <- function(
     input$X,
     comp$U,
     shrinkage = shrinkage,
-    eigenmin = eigenmin
+    eigenmin = eigenmin,
+    scale = FALSE
   )
   out <- .ld_fspd(.ld_symmetrize(comp$P + E_reg), eigenmin = eigenmin)
   out <- stats::cov2cor(out)

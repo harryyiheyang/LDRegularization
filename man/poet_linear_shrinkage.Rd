@@ -9,7 +9,8 @@ poet_linear_shrinkage(
   n = NULL,
   alpha = 0.5,
   eigenmin = 0.001,
-  X = NULL
+  X = NULL,
+  scale = FALSE
 )
 }
 \arguments{
@@ -24,6 +25,9 @@ idiosyncratic covariance. Default is 0.5.}
 
 \item{X}{Optional individual-level data matrix. Used to compute `S` when
 `S` is not supplied and to infer `n`.}
+
+\item{scale}{If `TRUE`, center and standardize `X` before computing `S`.
+Default is `FALSE`, assuming `X` has already been scaled.}
 }
 \value{
 A positive-definite POET regularized correlation matrix.

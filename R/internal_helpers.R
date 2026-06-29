@@ -59,11 +59,23 @@
   out
 }
 
-.ld_matrix_cor <- function(x) {
-  x <- .ld_as_matrix(x, "X")
+.ld_matrix_cor <- function(x, scale = FALSE, name = "X") {
+  if (isTRUE(scale)) {
+    x <- .ld_as_matrix(x, name)
+    out <- tryCatch(
+      CppMatrix::matrixCor(x),
+      error = function(e) stats::cor(x, use = "pairwise.complete.obs")
+    )
+    return(.ld_clean_correlation(out, "correlation matrix"))
+  }
+
+  x <- .ld_as_matrix(x, name)
+  if (nrow(x) < 2L || ncol(x) < 1L) {
+    stop(name, " must have at least 2 rows and 1 column.", call. = FALSE)
+  }
   out <- tryCatch(
-    CppMatrix::matrixCor(x),
-    error = function(e) stats::cor(x, use = "pairwise.complete.obs")
+    CppMatrix::matrixMultiply(x, x, transA = TRUE) / (nrow(x) - 1L),
+    error = function(e) crossprod(x) / (nrow(x) - 1L)
   )
   .ld_clean_correlation(out, "correlation matrix")
 }
@@ -81,20 +93,38 @@
   list(X = x, n = nrow(x), n_eff = nrow(x) - 1L)
 }
 
-.ld_resolve_input <- function(S = NULL, X = NULL, n = NULL, name = "S") {
+.ld_prepare_matrix <- function(x, name = "X", scale = FALSE) {
+  if (isTRUE(scale)) {
+    return(.ld_scale_matrix(x, name))
+  }
+  x <- .ld_as_matrix(x, name)
+  if (nrow(x) < 2L || ncol(x) < 1L) {
+    stop(name, " must have at least 2 rows and 1 column.", call. = FALSE)
+  }
+  list(X = x, n = nrow(x), n_eff = nrow(x) - 1L)
+}
+
+.ld_resolve_input <- function(S = NULL, X = NULL, n = NULL, name = "S", scale = FALSE) {
   if (is.null(S) && is.null(X)) {
     stop("Provide either ", name, " or X.", call. = FALSE)
   }
   if (!is.null(S)) {
     S <- .ld_as_square_matrix(S, name)
-    if (!is.null(X) && is.null(n)) {
-      X <- .ld_as_matrix(X, "X")
-      n <- nrow(X)
+    if (!is.null(X)) {
+      prepared <- .ld_prepare_matrix(X, "X", scale = scale)
+      X <- prepared$X
+      if (is.null(n)) {
+        n <- prepared$n
+      }
     }
     return(list(S = S, X = X, n = n))
   }
-  X <- .ld_as_matrix(X, "X")
-  list(S = .ld_matrix_cor(X), X = X, n = nrow(X))
+  prepared <- .ld_prepare_matrix(X, "X", scale = scale)
+  list(
+    S = .ld_matrix_cor(prepared$X, scale = FALSE),
+    X = prepared$X,
+    n = prepared$n
+  )
 }
 
 .ld_validate_n <- function(n) {

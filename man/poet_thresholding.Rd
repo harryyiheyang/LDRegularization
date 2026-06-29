@@ -9,7 +9,8 @@ poet_thresholding(
   n = NULL,
   lambda = NULL,
   eigenmin = 0.001,
-  X = NULL
+  X = NULL,
+  scale = FALSE
 )
 }
 \arguments{
@@ -25,6 +26,9 @@ If missing, `2 * max(sqrt(log(p) / n), 1 / sqrt(p))` is used.}
 
 \item{X}{Optional individual-level data matrix. Used to compute `S` when
 `S` is not supplied and to infer `n`.}
+
+\item{scale}{If `TRUE`, center and standardize `X` before computing `S`.
+Default is `FALSE`, assuming `X` has already been scaled.}
 }
 \value{
 A positive-definite POET regularized correlation matrix.

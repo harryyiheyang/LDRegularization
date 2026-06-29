@@ -10,7 +10,8 @@ poet_banding(
   K = NULL,
   alpha = 1,
   eigenmin = 0.001,
-  X = NULL
+  X = NULL,
+  scale = FALSE
 )
 }
 \arguments{
@@ -28,6 +29,9 @@ bandwidth. Default is 1.}
 
 \item{X}{Optional individual-level data matrix. Used to compute `S` when
 `S` is not supplied and to infer `n`.}
+
+\item{scale}{If `TRUE`, center and standardize `X` before computing `S`.
+Default is `FALSE`, assuming `X` has already been scaled.}
 }
 \value{
 A positive-definite POET regularized correlation matrix.

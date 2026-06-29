@@ -9,7 +9,8 @@ poet_nonlinear_shrinkage(
   S = NULL,
   n = NULL,
   shrinkage = 0,
-  eigenmin = 0.001
+  eigenmin = 0.001,
+  scale = FALSE
 )
 }
 \arguments{
@@ -25,6 +26,9 @@ Default is 0, which keeps the sample residual and only applies the
 positive-definite safeguard.}
 
 \item{eigenmin}{Minimum eigenvalue target. Default is 0.001.}
+
+\item{scale}{If `TRUE`, center and standardize `X` before estimation.
+Default is `FALSE`, assuming `X` has already been scaled.}
 }
 \value{
 A positive-definite POET regularized correlation matrix.

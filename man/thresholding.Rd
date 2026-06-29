@@ -4,7 +4,14 @@
 \alias{thresholding}
 \title{Entrywise MCP thresholding with FSPD positive-definite modification}
 \usage{
-thresholding(S = NULL, n = NULL, lambda = NULL, eigenmin = 0.001, X = NULL)
+thresholding(
+  S = NULL,
+  n = NULL,
+  lambda = NULL,
+  eigenmin = 0.001,
+  X = NULL,
+  scale = FALSE
+)
 }
 \arguments{
 \item{S}{Symmetric covariance or correlation matrix.}
@@ -18,6 +25,9 @@ the theoretical default.}
 
 \item{X}{Optional individual-level data matrix. Used to compute `S` when
 `S` is not supplied and to infer `n` for the default threshold.}
+
+\item{scale}{If `TRUE`, center and standardize `X` before computing `S`.
+Default is `FALSE`, assuming `X` has already been scaled.}
 }
 \value{
 A positive-definite thresholded covariance matrix.

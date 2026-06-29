@@ -4,7 +4,15 @@
 \alias{tapering}
 \title{Tapering regularization with FSPD positive-definite modification}
 \usage{
-tapering(A = NULL, n = NULL, K = NULL, alpha = 1, eigenmin = 0.001, X = NULL)
+tapering(
+  A = NULL,
+  n = NULL,
+  K = NULL,
+  alpha = 1,
+  eigenmin = 0.001,
+  X = NULL,
+  scale = FALSE
+)
 }
 \arguments{
 \item{A}{Symmetric covariance or correlation matrix.}
@@ -21,6 +29,9 @@ bandwidth. Default is 1.}
 
 \item{X}{Optional individual-level data matrix. Used to compute `A` when
 `A` is not supplied and to infer `n` for the default bandwidth.}
+
+\item{scale}{If `TRUE`, center and standardize `X` before computing `A`.
+Default is `FALSE`, assuming `X` has already been scaled.}
 }
 \value{
 A positive-definite tapered covariance matrix.

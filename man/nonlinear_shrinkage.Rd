@@ -4,7 +4,7 @@
 \alias{nonlinear_shrinkage}
 \title{Ledoit-Wolf nonlinear shrinkage with optional light mixing}
 \usage{
-nonlinear_shrinkage(X, shrinkage = 0, eigenmin = 0.001)
+nonlinear_shrinkage(X, shrinkage = 0, eigenmin = 0.001, scale = FALSE)
 }
 \arguments{
 \item{X}{Individual-level data matrix with observations in rows.}
@@ -14,6 +14,9 @@ Default is 0, which returns the positive-definite sample correlation
 matrix. Use 1 for the full nonlinear shrinkage estimator.}
 
 \item{eigenmin}{Minimum eigenvalue target. Default is 0.001.}
+
+\item{scale}{If `TRUE`, center and standardize `X` before estimation.
+Default is `FALSE`, assuming `X` has already been scaled.}
 }
 \value{
 A positive-definite nonlinear-shrinkage correlation matrix.

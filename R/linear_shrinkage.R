@@ -6,6 +6,8 @@
 #' @param S Optional symmetric correlation matrix.
 #' @param X Optional individual-level data matrix. Used to compute `S` when
 #'   `S` is not supplied.
+#' @param scale If `TRUE`, center and standardize `X` before computing `S`.
+#'   Default is `FALSE`, assuming `X` has already been scaled.
 #' @param alpha Shrinkage intensity in `[0, 1]`. Default is 0.05.
 #' @param target Optional shrinkage target. Defaults to the identity matrix.
 #' @param eigenmin Minimum eigenvalue target for FSPD. Default is 0.001.
@@ -20,9 +22,10 @@ linear_shrinkage <- function(
     alpha = 0.05,
     target = NULL,
     eigenmin = 1e-3,
-    lambda = NULL
+    lambda = NULL,
+    scale = FALSE
 ) {
-  input <- .ld_resolve_input(S = S, X = X, name = "S")
+  input <- .ld_resolve_input(S = S, X = X, name = "S", scale = scale)
   S <- input$S
   p <- ncol(S)
   if (is.null(target)) {

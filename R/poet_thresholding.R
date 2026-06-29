@@ -7,6 +7,8 @@
 #' @param S Optional symmetric covariance or correlation matrix.
 #' @param X Optional individual-level data matrix. Used to compute `S` when
 #'   `S` is not supplied and to infer `n`.
+#' @param scale If `TRUE`, center and standardize `X` before computing `S`.
+#'   Default is `FALSE`, assuming `X` has already been scaled.
 #' @param n Sample size used to form `S`. Required when `S` is supplied and
 #'   `lambda` is not supplied.
 #' @param lambda Optional scalar threshold. Overrides the theoretical default.
@@ -20,9 +22,10 @@ poet_thresholding <- function(
     n = NULL,
     lambda = NULL,
     eigenmin = 1e-3,
-    X = NULL
+    X = NULL,
+    scale = FALSE
 ) {
-  input <- .ld_resolve_input(S = S, X = X, n = n, name = "S")
+  input <- .ld_resolve_input(S = S, X = X, n = n, name = "S", scale = scale)
   S <- input$S
   n <- input$n
   n <- .ld_validate_n(n)

@@ -8,6 +8,8 @@
 #' @param A Symmetric covariance or correlation matrix.
 #' @param X Optional individual-level data matrix. Used to compute `A` when
 #'   `A` is not supplied and to infer `n` for the default bandwidth.
+#' @param scale If `TRUE`, center and standardize `X` before computing `A`.
+#'   Default is `FALSE`, assuming `X` has already been scaled.
 #' @param n Sample size used to form `A`. Required when `K` is not supplied.
 #' @param K Optional bandwidth. If supplied, it overrides the theoretical
 #'   default.
@@ -23,9 +25,10 @@ banding <- function(
     K = NULL,
     alpha = 1,
     eigenmin = 1e-3,
-    X = NULL
+    X = NULL,
+    scale = FALSE
 ) {
-  input <- .ld_resolve_input(S = A, X = X, n = n, name = "A")
+  input <- .ld_resolve_input(S = A, X = X, n = n, name = "A", scale = scale)
   A <- input$S
   n <- input$n
   p <- nrow(A)

@@ -10,7 +10,8 @@ linear_shrinkage(
   alpha = 0.05,
   target = NULL,
   eigenmin = 0.001,
-  lambda = NULL
+  lambda = NULL,
+  scale = FALSE
 )
 }
 \arguments{
@@ -27,6 +28,9 @@ linear_shrinkage(
 
 \item{lambda}{Deprecated alias for `alpha`, kept for backward
 compatibility.}
+
+\item{scale}{If `TRUE`, center and standardize `X` before computing `S`.
+Default is `FALSE`, assuming `X` has already been scaled.}
 }
 \value{
 A regularized correlation matrix after shrinkage.

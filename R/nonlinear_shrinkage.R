@@ -8,16 +8,18 @@
 #'   Default is 0, which returns the positive-definite sample correlation
 #'   matrix. Use 1 for the full nonlinear shrinkage estimator.
 #' @param eigenmin Minimum eigenvalue target. Default is 0.001.
+#' @param scale If `TRUE`, center and standardize `X` before estimation.
+#'   Default is `FALSE`, assuming `X` has already been scaled.
 #'
 #' @return A positive-definite nonlinear-shrinkage correlation matrix.
 #' @export
-nonlinear_shrinkage <- function(X, shrinkage = 0, eigenmin = 1e-3) {
+nonlinear_shrinkage <- function(X, shrinkage = 0, eigenmin = 1e-3, scale = FALSE) {
   if (missing(X) || is.null(X)) {
     stop("nonlinear_shrinkage requires individual-level X.", call. = FALSE)
   }
-  scaled <- .ld_scale_matrix(X, "X")
-  S_sample <- .ld_matrix_cor(scaled$X)
-  S_nl <- .ld_nonlinear_qis(scaled$X, eigenmin = eigenmin)
+  prepared <- .ld_prepare_matrix(X, "X", scale = scale)
+  S_sample <- .ld_matrix_cor(prepared$X, scale = FALSE)
+  S_nl <- .ld_nonlinear_qis(prepared$X, eigenmin = eigenmin)
   S_nl <- stats::cov2cor(S_nl)
   S_nl[is.na(S_nl)] <- 0
   S_nl <- .ld_symmetrize(S_nl)
@@ -94,9 +96,9 @@ nonlinear_shrinkage <- function(X, shrinkage = 0, eigenmin = 1e-3) {
   .ld_reconstruct_from_eigen(u, delta)
 }
 
-.ld_nonlinear_residual <- function(X, U, shrinkage = 0, eigenmin = 1e-3) {
-  scaled <- .ld_scale_matrix(X, "X")
-  X_scaled <- scaled$X
+.ld_nonlinear_residual <- function(X, U, shrinkage = 0, eigenmin = 1e-3, scale = FALSE) {
+  prepared <- .ld_prepare_matrix(X, "X", scale = scale)
+  X_scaled <- prepared$X
   p <- ncol(X_scaled)
   q <- p - ncol(U)
   if (q <= 0L) {
@@ -104,7 +106,7 @@ nonlinear_shrinkage <- function(X, shrinkage = 0, eigenmin = 1e-3) {
   }
   B <- qr.Q(qr(U), complete = TRUE)[, (ncol(U) + 1L):p, drop = FALSE]
   Z <- CppMatrix::matrixMultiply(X_scaled, B)
-  S_sample <- CppMatrix::matrixMultiply(Z, Z, transA = TRUE) / scaled$n_eff
+  S_sample <- CppMatrix::matrixMultiply(Z, Z, transA = TRUE) / prepared$n_eff
   S_sample <- .ld_symmetrize(S_sample)
   S_nl <- .ld_nonlinear_qis(Z, eigenmin = eigenmin)
   shrinkage <- min(max(shrinkage[1L], 0), 1)

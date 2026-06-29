@@ -6,6 +6,8 @@
 #' @param S Optional symmetric covariance or correlation matrix.
 #' @param X Optional individual-level data matrix. Used to compute `S` when
 #'   `S` is not supplied and to infer `n`.
+#' @param scale If `TRUE`, center and standardize `X` before computing `S`.
+#'   Default is `FALSE`, assuming `X` has already been scaled.
 #' @param n Sample size used to form `S`.
 #' @param alpha Shrinkage intensity in `[0, 1]` toward the diagonal of the
 #'   idiosyncratic covariance. Default is 0.5.
@@ -18,9 +20,10 @@ poet_linear_shrinkage <- function(
     n = NULL,
     alpha = 0.5,
     eigenmin = 1e-3,
-    X = NULL
+    X = NULL,
+    scale = FALSE
 ) {
-  input <- .ld_resolve_input(S = S, X = X, n = n, name = "S")
+  input <- .ld_resolve_input(S = S, X = X, n = n, name = "S", scale = scale)
   S <- input$S
   n <- input$n
   n <- .ld_validate_n(n)
