@@ -47,7 +47,7 @@ thresholding <- function(
     diag(cut) <- 0
   }
 
-  Mcor <- mcp(S_cor, lam = cut, a = 3)
+  Mcor <- .ld_mcp(S_cor, lam = cut, a = 3)
   Mcor <- .ld_symmetrize(Mcor)
   diag(Mcor) <- 1
 

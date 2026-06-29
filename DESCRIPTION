@@ -7,16 +7,17 @@ Maintainer: Yihe Yang <yxy1234@case.edu>
 Description: This package provides methods for regularizing large-scale 
     linkage disequilibrium (LD) matrix. It implements a variety of 
     regularization techniques, including shrinkage, nonlinear shrinkage,
-    banding, tapering, thresholding, POET-based extensions, and covariance
-    transfer learning helpers. The package enables efficient computation for
-    high-dimensional LD matrix estimation via CppMatrix-backed matrix
-    operations where possible.
+    banding, tapering, thresholding, standard POET extensions, and
+    cluster-wise POET for LD matrices. The package enables efficient
+    computation for high-dimensional LD matrix estimation via
+    CppMatrix-backed matrix operations where possible.
 License: MIT + file LICENSE
 Encoding: UTF-8
-LazyData: true
 Depends: 
     R (>= 2.10)
 Imports:
     CppMatrix
+Suggests:
+    testthat (>= 3.0.0)
 RoxygenNote: 7.3.3
 Config/testthat/edition: 3

@@ -1,6 +1,6 @@
 # LDRegularization
 
-The `LDRegularization` package provides a collection of covariance and correlation matrix regularization methods, with a focus on high-dimensional settings such as linkage disequilibrium (LD) matrices in statistical genetics. The package implements sparse regularization, shrinkage, nonlinear shrinkage, POET-style estimators, and covariance transfer learning helpers.
+The `LDRegularization` package provides a collection of covariance and correlation matrix regularization methods, with a focus on high-dimensional settings such as linkage disequilibrium (LD) matrices in statistical genetics. The package implements sparse regularization, shrinkage, nonlinear shrinkage, and POET-style estimators.
 
 These tools help ensure positive semi-definiteness and improve estimation accuracy when working with large, noisy covariance or correlation matrices.
 
@@ -15,6 +15,9 @@ devtools::install_github("harryyiheyang/LDRegularization")
 ## Functions
 
 The package currently includes the following main functions:
+
+- poet_block: Block-wise POET for LD matrices with thresholding, tapering,
+  linear shrinkage, or nonlinear shrinkage residual regularization.
 
 - poet_thresholding: POET estimator with entrywise thresholding on the idiosyncratic covariance.
 
@@ -38,12 +41,6 @@ The package currently includes the following main functions:
 - nonlinear_shrinkage: Standalone mixed nonlinear shrinkage for individual-level
   data.
 
-- covariance_tl: Covariance transfer learning helper with covariance or
-  projection source transfer.
-
-- select_tl_alpha: 5-fold cross-validation helper for choosing the transfer
-  strength `tl_alpha`.
-
 Most matrix estimators accept either a precomputed matrix (`S` or `A`) or
 individual-level data `X`. Nonlinear shrinkage requires `X`. The POET functions
 automatically select the number of latent factors via the ratio-type criterion.
@@ -58,18 +55,15 @@ linear shrinkage uses `alpha = 0.5` by default. Nonlinear shrinkage has
 `shrinkage = 0` by default, so scripts should set it explicitly, for example
 `shrinkage = 0.5`, when a stronger nonlinear component is desired.
 
-Sparse estimators are made positive definite with fixed-support positive-definite (FSPD) linear shrinkage, using `eigenmin = 0.001` by default. FSPD is a final safeguard and does not choose the sparsity tuning parameter.
+`poet_block` first clusters variants by absolute LD, keeps enough eigenvectors in
+each cluster to explain `cumvar = 0.95` of within-cluster variation, refines the
+combined subspace with three power iterations, and then regularizes the
+residual with `regularizer = "linear_shrinkage"`, `"thresholding"`,
+`"tapering"`, or `"nonlinear_shrinkage"`. The nonlinear option requires
+individual-level data `X`. When `n` is omitted, thresholding and bandwidth
+defaults use simple dimension-based fallbacks.
 
-Covariance transfer learning uses target correlation `S` and source
-information only to guide the factor space. With `strategy = "covariance"`, the
-factor space is estimated from `S + tl_alpha * source`. With
-`strategy = "projection"`, the source enters through a trace-normalized source
-basis/projector. The residual component is then regularized by one existing
-method: thresholding, banding, tapering, linear shrinkage, or mixed nonlinear
-shrinkage. `select_tl_alpha` chooses `tl_alpha` from a small grid using target
-individual-level data `X_target` and off-diagonal Frobenius loss on held-out
-target correlations. If `X_source` is supplied and no source covariance is
-given, the source correlation is computed internally.
+Sparse estimators are made positive definite with fixed-support positive-definite (FSPD) linear shrinkage, using `eigenmin = 0.001` by default. FSPD is a final safeguard and does not choose the sparsity tuning parameter.
 
 ## Dependencies
 

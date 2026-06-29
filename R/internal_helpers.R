@@ -379,7 +379,7 @@
   } else {
     0
   }
-  dk <- pmax(mcp(dk, hatc * p / n, a = 3), 0)
+  dk <- pmax(.ld_mcp(dk, hatc * p / n, a = 3), 0)
   P <- tcrossprod(t(t(Uk) * dk), Uk)
   P <- .ld_symmetrize(P)
   E <- .ld_fix_residual_diag(S - P)
